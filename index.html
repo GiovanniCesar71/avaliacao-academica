@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1B2A4A">
+<title>App de Avaliação Acadêmica</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.0/firebase-database-compat.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#1B2A4A;--bg2:#243356;--bg3:#2D3D66;--bg4:#364880;
+  --fg:#E8EDF4;--fg2:#A8B4CC;--fg3:#6B7A99;
+  --green:#7CC96A;--green2:#5AAD48;--green-bg:rgba(124,201,106,.12);
+  --amber:#F0A500;--amber-bg:rgba(240,165,0,.12);
+  --red:#E05C5C;--red-bg:rgba(224,92,92,.12);
+  --radius:12px;--radius-sm:8px;
+  --tab-h:64px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:'Inter',sans-serif;font-size:15px}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative}
+.header{background:var(--bg2);padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.header-title{font-size:17px;font-weight:700;color:var(--fg)}
+.header-sub{font-size:12px;color:var(--fg3)}
+.btn-icon{background:transparent;border:none;color:var(--fg2);cursor:pointer;padding:4px;border-radius:var(--radius-sm);font-size:20px;line-height:1;display:flex;align-items:center}
+.btn-icon:active{background:var(--bg3)}
+.screen{display:none;flex:1;overflow-y:auto;padding:12px 14px;padding-bottom:calc(var(--tab-h) + 12px)}
+.screen.active{display:block}
+.tabs{height:var(--tab-h);background:var(--bg2);border-top:1px solid rgba(255,255,255,.06);display:flex;flex-shrink:0;position:relative;z-index:10}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;color:var(--fg3);font-size:10px;font-weight:500;font-family:'Inter',sans-serif;transition:color .15s;padding:8px 0}
+.tab.active{color:var(--green)}
+.tab-icon{font-size:22px;line-height:1}
+.card{background:var(--bg2);border:1px solid rgba(255,255,255,.07);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.card-row{display:flex;justify-content:space-between;align-items:center}
+.card-title{font-size:14px;font-weight:600;color:var(--fg);margin-bottom:3px}
+.card-sub{font-size:12px;color:var(--fg2)}
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-amber{background:var(--amber-bg);color:var(--amber)}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--fg2)}
+.btn{width:100%;padding:14px;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .1s}
+.btn:active{opacity:.85}
+.btn-primary{background:var(--green);color:#0F1E0F}
+.btn-secondary{background:var(--bg3);color:var(--fg)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid rgba(224,92,92,.3)}
+.btn-sm{padding:9px 14px;font-size:13px;width:auto;border-radius:var(--radius-sm)}
+.field{margin-bottom:12px}
+.label{font-size:12px;color:var(--fg2);margin-bottom:5px;display:block;font-weight:500}
+.input{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-sm);padding:12px;color:var(--fg);font-size:14px;font-family:'Inter',sans-serif;outline:none}
+.input:focus{border-color:var(--green);background:var(--bg2)}
+.input::placeholder{color:var(--fg3)}
+select.input{cursor:pointer}
+textarea.input{resize:none;min-height:72px}
+.sec-label{font-size:11px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px}
+.score-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.score-btn{background:var(--bg3);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-sm);color:var(--fg2);font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;padding:8px 10px;min-width:44px;text-align:center;transition:all .1s}
+.score-btn:active{opacity:.7}
+.score-btn.sel{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.total-box{background:var(--green-bg);border:1px solid rgba(124,201,106,.25);border-radius:var(--radius);padding:14px;display:flex;justify-content:space-between;align-items:center;margin:14px 0}
+.total-label{font-size:13px;color:var(--green)}
+.total-value{font-size:28px;font-weight:700;color:var(--green)}
+.empty{text-align:center;padding:48px 24px;color:var(--fg3)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:600;color:var(--fg2);margin-bottom:6px}
+.empty-sub{font-size:13px;line-height:1.5}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:flex-end;justify-content:center;max-width:480px;margin:0 auto}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:88vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:14px}
+.modal-actions .btn{flex:1}
+.crit-item{background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.crit-item-info{flex:1}
+.crit-item-name{font-size:13px;font-weight:600}
+.crit-item-meta{font-size:11px;color:var(--fg3);margin-top:2px}
+.crit-remove{background:transparent;border:none;color:var(--fg3);cursor:pointer;font-size:18px;padding:4px;line-height:1}
+.crit-remove:active{color:var(--red)}
+.prog-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;margin-top:10px}
+.prog-bar{height:100%;background:var(--green);border-radius:4px;transition:width .3s}
+.nota-grande{font-size:36px;font-weight:700;color:var(--green);line-height:1}
+.adhoc-tag{display:inline-flex;align-items:center;gap:4px;background:var(--amber-bg);color:var(--amber);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600}
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap .input{padding-left:36px}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--fg3)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-title" id="hdr-title">Avaliação Acadêmica</div>
+        <div class="header-sub" id="hdr-sub">Nenhum evento ativo</div>
+      </div>
+      <button class="btn-icon" onclick="openEventModal()">⚙️</button>
+    </div>
+  </div>
+
+  <div class="screen active" id="screen-projetos">
+    <div class="sec-label">Projetos do evento</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="input" id="busca-input" placeholder="Buscar por nome ou grupo..." oninput="renderProjetos()">
+    </div>
+    <div id="lista-projetos"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button class="btn btn-secondary" onclick="openAddProjetoModal(false)">+ Adicionar</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
+      <button class="btn btn-secondary" style="grid-column:span 2;background:var(--bg3);border:1px solid rgba(124,201,106,.3);color:var(--green)" onclick="abrirLeitorQR()">📷 Ler QR Code do projeto</button>
+    </div>
+    <input type="file" id="xls-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importarExcel(this)">
+  </div>
+
+  <div class="screen" id="screen-avaliacao">
+    <div id="avaliacao-content"></div>
+  </div>
+
+  <div class="screen" id="screen-resumo">
+    <div id="resumo-content"></div>
+  </div>
+
+  <div class="screen" id="screen-config">
+    <div class="sec-label">Evento atual</div>
+    <div class="card">
+      <div class="card-title" id="cfg-nome">Sem evento configurado</div>
+      <div class="card-sub" id="cfg-info"></div>
+      <button class="btn btn-secondary" style="margin-top:12px;font-size:13px;padding:10px" onclick="openEventModal()">Editar evento</button>
+    </div>
+    <div class="sec-label">Critérios de avaliação</div>
+    <div id="lista-criterios-cfg"></div>
+    <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openCriterioModal()">+ Novo critério</button>
+    <div class="sec-label">Avaliador</div>
+    <div class="field"><input class="input" id="cfg-avaliador" placeholder="Seu nome ou identificação" oninput="saveAvaliador()"></div>
+    <div class="sec-label" style="margin-top:20px">Dados</div>
+    <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="goTab('projetos',this)" data-tab="projetos"><span class="tab-icon">📋</span>Projetos</button>
+    <button class="tab" onclick="goTab('avaliacao',this)" data-tab="avaliacao"><span class="tab-icon">✏️</span>Avaliar</button>
+    <button class="tab" onclick="goTab('resumo',this)" data-tab="resumo"><span class="tab-icon">📊</span>Resumo</button>
+    <button class="tab" onclick="goTab('config',this)" data-tab="config"><span class="tab-icon">⚙️</span>Config</button>
+  </div>
+</div>
+
+<!-- MODAL EVENTO -->
+<div class="overlay" id="modal-evento">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Configurar evento</div>
+    <div class="field"><label class="label">Nome do evento</label><input class="input" id="ev-nome" placeholder="Ex: Feira de Projetos 2026"></div>
+    <div class="field"><label class="label">Instituição (opcional)</label><input class="input" id="ev-inst" placeholder="Ex: FATEC Catanduva"></div>
+    <div class="field"><label class="label">Disciplina / turma (opcional)</label><input class="input" id="ev-disc" placeholder="Ex: Eletricidade Aplicada — 3º sem"></div>
+    <div class="field"><label class="label">Data</label><input class="input" type="date" id="ev-data"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-evento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEvento()">Salvar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADICIONAR PROJETO -->
+<div class="overlay" id="modal-add-projeto">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="add-proj-title">Adicionar projeto</div>
+    <div class="field"><label class="label">Número / grupo</label><input class="input" id="proj-grupo" placeholder="Ex: 01 ou Grupo A"></div>
+    <div class="field"><label class="label">Título do projeto</label><input class="input" id="proj-titulo" placeholder="Ex: Garagem Automatizada"></div>
+    <div class="field"><label class="label">Integrantes</label><input class="input" id="proj-integrantes" placeholder="Ex: Ana / Carlos"></div>
+    <div class="field"><label class="label">Descrição (opcional)</label><textarea class="input" id="proj-desc" placeholder="Breve descrição..."></textarea></div>
+    <div id="adhoc-wrap" style="margin-bottom:12px;display:none">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="proj-adhoc" style="width:18px;height:18px;accent-color:var(--amber)">
+        <span style="font-size:13px;color:var(--amber)">Marcar como ad hoc</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-projeto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProjeto()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QR CODE -->
+<div class="overlay" id="modal-qr">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📷 Ler QR Code do projeto</div>
+    <div id="qr-status" style="font-size:13px;color:var(--fg2);margin-bottom:12px;text-align:center">Aponte a câmera para o QR Code</div>
+    <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1">
+      <video id="qr-video" style="width:100%;height:100%;object-fit:cover" playsinline></video>
+      <canvas id="qr-canvas" style="display:none"></canvas>
+      <div style="position:absolute;inset:0;border:2px solid var(--green);border-radius:12px;pointer-events:none;box-shadow:inset 0 0 0 40px rgba(0,0,0,.4)">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border:3px solid var(--green);border-radius:8px"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px"><button class="btn btn-secondary" onclick="fecharLeitorQR()">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTAR EXCEL -->
+<div class="overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Importar projetos do Excel</div>
+    <div id="import-preview"></div>
+    <div id="import-map" style="margin-bottom:12px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarImport()">Importar projetos</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CRITÉRIO -->
+<div class="overlay" id="modal-criterio">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Novo critério</div>
+    <div class="field"><label class="label">Eixo / grupo (opcional)</label><input class="input" id="crit-eixo" placeholder="Ex: Apresentação"></div>
+    <div class="field"><label class="label">Nome do critério</label><input class="input" id="crit-nome" placeholder="Ex: Explanação Oral e Didática"></div>
+    <div class="field"><label class="label">Descrição curta (opcional)</label><input class="input" id="crit-desc" placeholder="Ex: Clareza, postura, gestão do tempo"></div>
+    <div class="field"><label class="label">Nota máxima</label>
+      <select class="input" id="crit-max">
+        <option>0.5</option><option>1.0</option><option selected>1.5</option>
+        <option>2.0</option><option>2.5</option><option>3.0</option>
+        <option>4.0</option><option>5.0</option><option>10.0</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-criterio')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCriterio()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
+let db=null,fbReady=false;
+
+async function initFirebase(){
+  try{
+    if(typeof firebase==='undefined'){showSyncStatus('🔴 Modo local');return;}
+    firebase.initializeApp({databaseURL:FB_URL});
+    db=firebase.database();fbReady=true;
+    db.ref('sessao').on('value',snap=>{
+      const data=snap.val();
+      if(data){const prev=state.projetoAtivo;state={...state,...data,projetoAtivo:prev};renderAll();
+        const t=document.querySelector('.tab.active');const tn=t?t.dataset.tab:'';
+        if(tn==='avaliacao')renderAvaliacao();if(tn==='resumo')renderResumo();}
+    });
+    showSyncStatus('🟢 Conectado — sync ativo');
+  }catch(e){showSyncStatus('🔴 Modo local');}
+}
+
+function showSyncStatus(msg){
+  let el=document.getElementById('sync-status');
+  if(!el){el=document.createElement('div');el.id='sync-status';
+    el.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;font-size:11px;padding:4px 12px;border-radius:20px;z-index:200;pointer-events:none;transition:opacity .5s';
+    document.body.appendChild(el);}
+  el.textContent=msg;el.style.opacity='1';setTimeout(()=>{el.style.opacity='0';},3000);
+}
+
+let state={evento:null,avaliador:'',projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null};
+
+function save(){
+  try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
+  if(fbReady&&db){
+    const s={evento:state.evento,avaliador:state.avaliador,projetos:state.projetos,criterios:state.criterios,avaliacoes:state.avaliacoes};
+    db.ref('sessao').set(s).catch(e=>console.warn(e));showSyncStatus('☁️ Salvo na nuvem');}
+}
+function load(){try{const d=localStorage.getItem('avaliacao_app');if(d)state={...state,...JSON.parse(d)};}catch(e){}}
+
+load();
+setTimeout(initFirebase,500);
+setTimeout(verificarURLParams,1000);
+
+if(!state.criterios.length){state.criterios=[
+  {id:'c1',eixo:'Apresentação',nome:'Explanação Oral e Didática',desc:'Clareza, postura, gestão do tempo',max:1.0},
+  {id:'c2',eixo:'Apresentação',nome:'Conhecimento Técnico',desc:'Domínio sobre o assunto apresentado',max:1.5},
+  {id:'c3',eixo:'Apresentação',nome:'Clareza: Problema e Objetivos',desc:'Delimitação e relevância da proposta',max:1.5},
+  {id:'c4',eixo:'Protótipo',nome:'Complexidade Técnica',desc:'Integração e exigência lógica',max:1.5},
+  {id:'c5',eixo:'Protótipo',nome:'Materiais e Componentes',desc:'Dimensionamento e segurança',max:1.0},
+  {id:'c6',eixo:'Protótipo',nome:'Protótipo Finalizado',desc:'Conclusão, operação e acabamento',max:2.0},
+  {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
+];}
+if(!state.projetos.length){state.projetos=[
+  {id:'p1',grupo:'01',titulo:'Garagem Automatizada',integrantes:'Otávio / Luís Felipe',desc:'',adhoc:false},
+  {id:'p2',grupo:'02',titulo:'Sensor de Nível',integrantes:'João Luiz / Maicon',desc:'',adhoc:false},
+  {id:'p3',grupo:'03',titulo:'Controle de Ambiente',integrantes:'Lucas / Guilherme',desc:'',adhoc:false},
+];}
+if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
+renderAll();
+
+function uid(){return Math.random().toString(36).slice(2,9);}
+function nota(pid){const av=state.avaliacoes[pid]||{};return state.criterios.reduce((s,c)=>s+(parseFloat(av[c.id])||0),0);}
+function notaMax(){return state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);}
+function statusProjeto(pid){
+  const av=state.avaliacoes[pid]||{};
+  const p=state.criterios.filter(c=>av[c.id]!==undefined&&av[c.id]!=='').length;
+  if(!p)return'pendente';if(p===state.criterios.length)return'concluido';return'parcial';
+}
+
+function goTab(tab,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');el.classList.add('active');
+  if(tab==='avaliacao')renderAvaliacao();if(tab==='resumo')renderResumo();if(tab==='config')renderConfig();
+}
+function renderAll(){renderHeader();renderProjetos();renderConfig();}
+
+function renderHeader(){
+  const ev=state.evento;
+  document.getElementById('hdr-title').textContent=ev?ev.nome:'Avaliação Acadêmica';
+  let sub='';
+  if(ev){if(ev.inst)sub+=ev.inst;if(ev.disc)sub+=(sub?' · ':'')+ev.disc;if(!sub)sub=ev.data||'Evento configurado';}
+  else sub='Nenhum evento ativo';
+  document.getElementById('hdr-sub').textContent=sub;
+}
+
+function renderProjetos(){
+  const q=(document.getElementById('busca-input').value||'').toLowerCase();
+  const list=state.projetos.filter(p=>!q||p.titulo.toLowerCase().includes(q)||p.grupo.toLowerCase().includes(q)||p.integrantes.toLowerCase().includes(q));
+  const el=document.getElementById('lista-projetos');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Nenhum projeto</div><div class="empty-sub">Adicione ou importe projetos.</div></div>';return;}
+  const max=notaMax();
+  el.innerHTML=list.map(p=>{
+    const st=statusProjeto(p.id);
+    const bm={concluido:'<span class="badge badge-green">✓ '+nota(p.id).toFixed(1)+'</span>',parcial:'<span class="badge badge-amber">Em andamento</span>',pendente:'<span class="badge badge-muted">Pendente</span>'};
+    const at=p.adhoc?'<span class="adhoc-tag">★ Ad hoc</span> ':'';
+    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub" style="margin-top:3px">'+p.integrantes+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,(nota(p.id)/max)*100)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
+  }).join('');
+}
+
+function selecionarProjeto(pid){state.projetoAtivo=pid;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));}
+
+function renderAvaliacao(){
+  const el=document.getElementById('avaliacao-content');
+  if(!state.projetoAtivo){el.innerHTML='<div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Nenhum projeto selecionado</div><div class="empty-sub">Selecione um projeto na aba Projetos.</div></div>';return;}
+  const p=state.projetos.find(x=>x.id===state.projetoAtivo);
+  if(!p){el.innerHTML='';return;}
+  const av=state.avaliacoes[p.id]||{};
+  const max=notaMax();const total=nota(p.id);
+  const eixos={};
+  state.criterios.forEach(c=>{const k=c.eixo||'Critérios';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
+  let html='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>';
+  Object.entries(eixos).forEach(([eixo,crits])=>{
+    const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
+    html+='<div class="sec-label">'+eixo+' <span style="font-weight:400;color:var(--fg3)">(máx '+em.toFixed(1)+')</span></div>';
+    crits.forEach(c=>{
+      const vals=gerarValores(parseFloat(c.max));const sv=av[c.id];
+      html+='<div class="card"><div class="card-title">'+c.nome+'</div>'+(c.desc?'<div class="card-sub" style="margin-top:2px;margin-bottom:8px">'+c.desc+'</div>':'<div style="height:6px"></div>')+'<div class="score-wrap">'+vals.map(v=>'<button class="score-btn'+(sv===v?' sel':'')+'" onclick="setNota(\''+p.id+'\',\''+c.id+'\','+v+')">'+v+'</button>').join('')+'</div></div>';
+    });
+  });
+  html+='<div class="total-box"><span class="total-label">Total</span><span class="total-value">'+total.toFixed(1)+' <span style="font-size:16px;font-weight:400;opacity:.6">/ '+max.toFixed(1)+'</span></span></div><div class="field"><label class="label">Observações</label><textarea class="input" placeholder="Registre destaques ou sugestões..." oninput="setObs(\''+p.id+'\',this.value)">'+(av.obs||'')+'</textarea></div><div style="height:16px"></div><button class="btn btn-primary" onclick="concluirAvaliacao(\''+p.id+'\')">✓ Salvar e voltar</button><div style="height:8px"></div>';
+  el.innerHTML=html;
+}
+
+function gerarValores(max){const s=Math.round(max/0.5)+1;const v=[];for(let i=0;i<s;i++)v.push(parseFloat((i*max/(s-1)).toFixed(1)));return[...new Set(v)];}
+function setNota(pid,cid,val){if(!state.avaliacoes[pid])state.avaliacoes[pid]={};state.avaliacoes[pid][cid]=val;save();renderAvaliacao();renderProjetos();}
+function setObs(pid,val){if(!state.avaliacoes[pid])state.avaliacoes[pid]={};state.avaliacoes[pid].obs=val;save();}
+function concluirAvaliacao(pid){save();goTab('projetos',document.querySelector('[data-tab="projetos"]'));}
+
+function renderResumo(){
+  const el=document.getElementById('resumo-content');
+  const max=notaMax();
+  const conc=state.projetos.filter(p=>statusProjeto(p.id)==='concluido');
+  const pend=state.projetos.filter(p=>statusProjeto(p.id)!=='concluido');
+  const media=conc.length?conc.reduce((s,p)=>s+nota(p.id),0)/conc.length:0;
+  let html='<div class="sec-label">Visão geral</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px">'+state.projetos.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Total</div></div><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--green)">'+conc.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Avaliados</div></div><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--amber)">'+pend.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Pendentes</div></div></div>';
+  if(conc.length){
+    html+='<div class="card" style="text-align:center;margin-bottom:14px;padding:16px"><div style="font-size:12px;color:var(--fg3);margin-bottom:4px">Média geral</div><div class="nota-grande">'+media.toFixed(2)+'</div><div style="font-size:12px;color:var(--fg3);margin-top:4px">de '+max.toFixed(1)+' pontos</div></div>';
+    const rank=[...state.projetos].filter(p=>statusProjeto(p.id)==='concluido').sort((a,b)=>nota(b.id)-nota(a.id));
+    html+='<div class="sec-label">Ranking</div>';
+    rank.forEach((p,i)=>{const n=nota(p.id);const pct=max>0?(n/max)*100:0;const m=['🥇','🥈','🥉'];html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(m[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+n.toFixed(1)+'</div></div></div>';});
+  }
+  if(pend.length){html+='<div class="sec-label">Pendentes</div>';pend.forEach(p=>{html+='<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div></div><span class="badge badge-amber">'+(statusProjeto(p.id)==='parcial'?'Parcial':'Pendente')+'</span></div></div>';});}
+  if(!state.projetos.length)html='<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione projetos e avalie para ver o resumo.</div></div>';
+  html+='<div style="height:8px"></div><button class="btn btn-secondary" onclick="exportarCSV()">↓ Exportar CSV</button><div style="height:8px"></div>';
+  el.innerHTML=html;
+}
+
+function renderConfig(){
+  const ev=state.evento;
+  document.getElementById('cfg-nome').textContent=ev?ev.nome:'Sem evento configurado';
+  let info=[];if(ev){if(ev.inst)info.push(ev.inst);if(ev.disc)info.push(ev.disc);if(ev.data)info.push(ev.data);}
+  document.getElementById('cfg-info').textContent=info.join(' · ');
+  if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
+  const el=document.getElementById('lista-criterios-cfg');
+  if(!state.criterios.length){el.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum critério configurado.</div>';return;}
+  const eixos={};state.criterios.forEach(c=>{const k=c.eixo||'Sem eixo';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
+  let html='';
+  Object.entries(eixos).forEach(([eixo,crits])=>{
+    const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
+    html+='<div style="font-size:11px;color:var(--fg3);margin:10px 0 5px;font-weight:600">'+eixo+' — máx '+em.toFixed(1)+'</div>';
+    crits.forEach(c=>{html+='<div class="crit-item"><div class="crit-item-info"><div class="crit-item-name">'+c.nome+'</div><div class="crit-item-meta">'+(c.desc?c.desc+' · ':'')+'Máx: '+c.max+'</div></div><button class="crit-remove" onclick="removerCriterio(\''+c.id+'\')">🗑</button></div>';});
+  });
+  const tm=state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);
+  html+='<div style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600">Total máximo: '+tm.toFixed(1)+' pontos</div>';
+  el.innerHTML=html;
+}
+
+function saveAvaliador(){state.avaliador=document.getElementById('cfg-avaliador').value;save();}
+function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save();renderConfig();}
+function confirmLimpar(){if(confirm('Apagar todas as avaliações?')){state.avaliacoes={};save();renderAll();}}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function openEventModal(){
+  if(state.evento){document.getElementById('ev-nome').value=state.evento.nome||'';document.getElementById('ev-inst').value=state.evento.inst||'';document.getElementById('ev-disc').value=state.evento.disc||'';document.getElementById('ev-data').value=state.evento.data||'';}
+  openModal('modal-evento');
+}
+function salvarEvento(){
+  const nome=document.getElementById('ev-nome').value.trim();
+  if(!nome){alert('Informe o nome do evento.');return;}
+  state.evento={nome,inst:document.getElementById('ev-inst').value.trim(),disc:document.getElementById('ev-disc').value.trim(),data:document.getElementById('ev-data').value};
+  save();renderAll();closeModal('modal-evento');
+}
+
+function openAddProjetoModal(adhoc){
+  document.getElementById('add-proj-title').textContent=adhoc?'Adicionar projeto (ad hoc)':'Adicionar projeto';
+  document.getElementById('adhoc-wrap').style.display=adhoc?'block':'none';
+  document.getElementById('proj-adhoc').checked=adhoc;
+  ['proj-grupo','proj-titulo','proj-integrantes','proj-desc'].forEach(id=>document.getElementById(id).value='');
+  openModal('modal-add-projeto');
+}
+function salvarProjeto(){
+  const titulo=document.getElementById('proj-titulo').value.trim();
+  if(!titulo){alert('Informe o título.');return;}
+  state.projetos.push({id:uid(),grupo:document.getElementById('proj-grupo').value.trim()||'—',titulo,integrantes:document.getElementById('proj-integrantes').value.trim(),desc:document.getElementById('proj-desc').value.trim(),adhoc:document.getElementById('proj-adhoc').checked});
+  save();renderProjetos();closeModal('modal-add-projeto');
+}
+
+function openCriterioModal(){['crit-eixo','crit-nome','crit-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('crit-max').value='1.5';openModal('modal-criterio');}
+function salvarCriterio(){
+  const nome=document.getElementById('crit-nome').value.trim();
+  if(!nome){alert('Informe o nome.');return;}
+  state.criterios.push({id:uid(),eixo:document.getElementById('crit-eixo').value.trim(),nome,desc:document.getElementById('crit-desc').value.trim(),max:parseFloat(document.getElementById('crit-max').value)});
+  save();renderConfig();closeModal('modal-criterio');
+}
+
+let qrStream=null,qrInterval=null;
+function abrirLeitorQR(){
+  openModal('modal-qr');
+  document.getElementById('qr-status').textContent='Iniciando câmera...';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(function(stream){
+      qrStream=stream;var v=document.getElementById('qr-video');v.srcObject=stream;v.play();
+      document.getElementById('qr-status').textContent='Aponte para o QR Code';
+      qrInterval=setInterval(lerFrameQR,300);
+    })
+    .catch(function(err){document.getElementById('qr-status').textContent='Câmera não disponível: '+err.message;document.getElementById('qr-status').style.color='var(--red)';});
+}
+function lerFrameQR(){
+  var v=document.getElementById('qr-video'),c=document.getElementById('qr-canvas');
+  if(v.readyState!==v.HAVE_ENOUGH_DATA)return;
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
+  var img=ctx.getImageData(0,0,c.width,c.height);
+  var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+  if(code)processarQR(code.data);
+}
+function processarQR(texto){
+  fecharLeitorQR();var id=null;
+  try{var url=new URL(texto);id=url.searchParams.get('projeto');}catch(e){if(texto.startsWith('adhoc_')||texto.length<30)id=texto;}
+  if(!id){alert('QR Code não reconhecido.');return;}
+  var existe=state.projetos.find(function(p){return p.id===id;});
+  if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
+  buscarProjetoFirebase(id);
+}
+function buscarProjetoFirebase(id){
+  if(!fbReady||!db){alert('Sem conexão com Firebase.');return;}
+  db.ref('projetos/'+id).once('value',function(snap){
+    var p=snap.val();if(!p){alert('Projeto não encontrado.');return;}
+    state.projetos.push(p);save();renderProjetos();showSyncStatus('✅ Importado via QR');selecionarProjeto(id);
+  });
+}
+function fecharLeitorQR(){
+  if(qrInterval){clearInterval(qrInterval);qrInterval=null;}
+  if(qrStream){qrStream.getTracks().forEach(function(t){t.stop();});qrStream=null;}
+  var v=document.getElementById('qr-video');if(v)v.srcObject=null;
+  closeModal('modal-qr');
+}
+function verificarURLParams(){
+  var params=new URLSearchParams(window.location.search);var pid=params.get('projeto');if(!pid)return;
+  var existe=state.projetos.find(function(p){return p.id===pid;});
+  if(existe){state.projetoAtivo=pid;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));showSyncStatus('✅ Projeto aberto via QR');}
+  else setTimeout(function(){buscarProjetoFirebase(pid);},1500);
+}
+
+let importRows=[],importCols=[];
+function importarExcel(input){
+  const file=input.files[0];if(!file)return;input.value='';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
+      const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!data.length){alert('Planilha vazia.');return;}
+      importRows=data;importCols=Object.keys(data[0]);renderImportModal();openModal('modal-import');
+    }catch(err){alert('Erro ao ler o arquivo.');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function guessCol(cols,hints){for(const h of hints){const f=cols.find(c=>c.toLowerCase().includes(h));if(f)return f;}return cols[0]||'';}
+function renderImportModal(){
+  const cG=guessCol(importCols,['grupo','num','n°','nº','id','#']);
+  const cT=guessCol(importCols,['titulo','título','nome','projeto','project']);
+  const cI=guessCol(importCols,['integr','aluno','membro','autor','equipe']);
+  const sel=s=>importCols.map(c=>'<option value="'+c+'"'+(c===s?' selected':'')+'>'+c+'</option>').join('');
+  document.getElementById('import-preview').innerHTML='<div style="font-size:13px;color:var(--fg2);margin-bottom:12px"><b>'+importRows.length+'</b> linha(s). Colunas: <span style="color:var(--fg3)">'+importCols.join(', ')+'</span></div>';
+  document.getElementById('import-map').innerHTML='<div class="field"><label class="label">Coluna → Grupo</label><select class="input" id="map-grupo">'+sel(cG)+'</select></div><div class="field"><label class="label">Coluna → Título</label><select class="input" id="map-titulo">'+sel(cT)+'</select></div><div class="field"><label class="label">Coluna → Integrantes</label><select class="input" id="map-integ">'+sel(cI)+'</select></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input type="checkbox" id="import-limpar" style="width:16px;height:16px;accent-color:var(--amber)"><label for="import-limpar" style="font-size:13px;color:var(--amber);cursor:pointer">Substituir lista atual</label></div>';
+}
+function confirmarImport(){
+  const cG=document.getElementById('map-grupo').value,cT=document.getElementById('map-titulo').value,cI=document.getElementById('map-integ').value;
+  const limpar=document.getElementById('import-limpar').checked;
+  const novos=importRows.filter(r=>r[cT]&&String(r[cT]).trim()).map(r=>({id:uid(),grupo:String(r[cG]||'—').trim(),titulo:String(r[cT]).trim(),integrantes:String(r[cI]||'').trim(),desc:'',adhoc:false}));
+  if(!novos.length){alert('Nenhum projeto válido.');return;}
+  if(limpar)state.projetos=novos;else state.projetos=[...state.projetos,...novos];
+  save();renderProjetos();closeModal('modal-import');showSyncStatus('✅ '+novos.length+' projeto(s) importado(s)');
+}
+
+document.querySelectorAll('.overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
+
+function exportarCSV(){
+  const cols=['grupo','titulo','integrantes','ad_hoc',...state.criterios.map(c=>c.nome),'total','obs'];
+  const rows=state.projetos.map(p=>{const av=state.avaliacoes[p.id]||{};return[p.grupo,p.titulo,p.integrantes,p.adhoc?'sim':'não',...state.criterios.map(c=>av[c.id]!==undefined?av[c.id]:''),nota(p.id).toFixed(1),av.obs||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',');});
+  const csv=[cols.map(c=>'"'+c+'"').join(','),...rows].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='avaliacoes.csv';a.click();URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
