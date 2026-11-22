@@ -113,97 +113,75 @@ textarea.input{resize:none;min-height:72px}
 <body>
 
 <!-- TELA DE LOGIN -->
+<!-- TELA DE LOGIN -->
 <div id="tela-login">
-  <div id="painel-login" style="width:100%;max-width:360px">
+  <div style="width:100%;max-width:360px">
     <div class="login-logo">🎓</div>
     <div class="login-titulo">Avaliação Acadêmica</div>
-    <div class="login-sub">Faça login para continuar</div>
-    <div class="field"><label class="label">Usuário</label><input class="input" id="login-user" placeholder="admin ou seu usuário" autocomplete="username"></div>
-    <div class="field"><label class="label">Senha</label><input class="input" id="login-pass" type="password" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
-    <div class="login-erro" id="login-erro"></div>
-    <div style="height:8px"></div>
-    <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
-    <div id="link-setup" class="login-link" style="display:none" onclick="mostrarPainelSetup()">Primeiro acesso — configurar senha do organizador</div>
-  </div>
-  <div id="painel-setup" style="width:100%;max-width:360px;display:none">
-    <div class="login-logo">🔑</div>
-    <div class="login-titulo">Criar senha do organizador</div>
-    <div class="login-sub">Esta senha será usada pelo organizador do evento. Faça isso só uma vez.</div>
-    <div class="field"><label class="label">Nova senha</label><input class="input" id="setup-senha" type="password" placeholder="Mínimo 4 caracteres"></div>
-    <div class="field"><label class="label">Confirmar senha</label><input class="input" id="setup-senha2" type="password" placeholder="Repita a senha"></div>
-    <div class="login-erro" id="setup-erro"></div>
-    <div style="height:8px"></div>
-    <button class="btn btn-primary" onclick="confirmarSetup()">Criar senha e entrar como organizador</button>
-    <div class="login-link" onclick="mostrarPainelLogin()" style="margin-top:12px">← Voltar ao login</div>
-  </div>
-</div>
+    <div class="login-sub">Selecione seu perfil para acessar</div>
 
-<div id="app">
-  <div class="header">
-    <div class="header-top">
-      <div>
-        <div class="header-title" id="hdr-title">Avaliação Acadêmica</div>
-        <div class="header-sub" id="hdr-sub">Nenhum evento ativo</div>
+    <!-- SELETOR DE PERFIL -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;background:var(--bg2);padding:4px;border-radius:var(--radius)">
+      <button type="button" id="btn-modo-admin" class="btn btn-sm" style="background:var(--green);color:#0F1E0F" onclick="selecionarModoLogin('admin')">👑 Organizador</button>
+      <button type="button" id="btn-modo-av" class="btn btn-sm" style="background:transparent;color:var(--fg2)" onclick="selecionarModoLogin('avaliador')">✏️ Avaliador</button>
+    </div>
+
+    <!-- PAINEL LOGIN ADMIN -->
+    <div id="painel-login-admin">
+      <div class="field">
+        <label class="label">Senha do Organizador</label>
+        <input class="input" id="login-admin-pass" type="password" placeholder="Digite a senha do organizador" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLoginAdmin()">
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="hdr-perfil" style="font-size:11px;color:var(--fg3)"></span>
-        <button class="btn-icon" onclick="fazerLogout()" title="Sair">🚪</button>
-        <button class="btn-icon" id="btn-cfg-header" onclick="openEventModal()" style="display:none">⚙️</button>
+      <div class="login-erro" id="login-erro-admin"></div>
+      <div style="height:8px"></div>
+      <button class="btn btn-primary" onclick="fazerLoginAdmin()">Entrar como Organizador</button>
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
+        <span id="link-setup" class="login-link" style="margin-top:0;display:none" onclick="mostrarPainelSetup()">Criar senha inicial</span>
+        <span id="link-recuperar-admin" class="login-link" style="margin-top:0" onclick="mostrarPainelRecuperar()">Esqueci minha senha</span>
       </div>
     </div>
-  </div>
 
-  <div class="screen active" id="screen-projetos">
-    <div class="sec-label">Projetos do evento</div>
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="input" id="busca-input" placeholder="Buscar por nome ou grupo..." oninput="renderProjetos()">
+    <!-- PAINEL LOGIN AVALIADOR -->
+    <div id="painel-login-av" style="display:none">
+      <div class="field">
+        <label class="label">Usuário do Avaliador</label>
+        <input class="input" id="login-user" placeholder="Ex: joao" autocomplete="username">
+      </div>
+      <div class="field">
+        <label class="label">Senha</label>
+        <input class="input" id="login-pass" type="password" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLoginAvaliador()">
+      </div>
+      <div class="login-erro" id="login-erro-av"></div>
+      <div style="height:8px"></div>
+      <button class="btn btn-primary" onclick="fazerLoginAvaliador()">Entrar como Avaliador</button>
+      <div class="login-link" onclick="alert('Solicite ao Organizador do evento a redefinição da sua senha na aba Config > Avaliadores.')">Esqueci minha senha</div>
     </div>
-    <div id="lista-projetos"></div>
-    <div id="botoes-projetos" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <button id="btn-add-proj" class="btn btn-secondary" onclick="openAddProjetoModal()">+ Adicionar</button>
-      <button id="btn-import-proj" class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
-      <button class="btn btn-secondary" style="grid-column:span 2;background:var(--bg3);border:1px solid rgba(124,201,106,.3);color:var(--green)" onclick="abrirLeitorQR()">📷 Ler QR Code do projeto</button>
+
+    <!-- PAINEL SETUP (PRIMEIRO ACESSO ADMIN) -->
+    <div id="painel-setup" style="display:none">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Configurar acesso do Organizador</div>
+      <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Defina a senha e uma palavra/código de recuperação para emergências.</div>
+      <div class="field"><label class="label">Nova senha (mín. 4 caracteres)</label><input class="input" id="setup-senha" type="password" placeholder="Senha do organizador"></div>
+      <div class="field"><label class="label">Confirmar senha</label><input class="input" id="setup-senha2" type="password" placeholder="Repita a senha"></div>
+      <div class="field"><label class="label">Palavra ou código de recuperação</label><input class="input" id="setup-rec" placeholder="Ex: fatec2026 (guarde para recuperar senha)"></div>
+      <div class="login-erro" id="setup-erro"></div>
+      <div style="height:8px"></div>
+      <button class="btn btn-primary" onclick="confirmarSetup()">Salvar e entrar como Organizador</button>
+      <div class="login-link" onclick="selecionarModoLogin('admin')">← Voltar ao login</div>
     </div>
-    <input type="file" id="xls-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importarExcel(this)">
-  </div>
 
-  <div class="screen" id="screen-avaliacao">
-    <div id="avaliacao-content"></div>
-  </div>
-
-  <div class="screen" id="screen-resumo">
-    <div id="resumo-content"></div>
-  </div>
-
-  <div class="screen" id="screen-config">
-    <div class="sec-label">Evento atual</div>
-    <div class="card">
-      <div class="card-title" id="cfg-nome">Sem evento configurado</div>
-      <div class="card-sub" id="cfg-info"></div>
-      <button class="btn btn-secondary" style="margin-top:12px;font-size:13px;padding:10px" onclick="openEventModal()">Editar evento</button>
+    <!-- PAINEL RECUPERAR SENHA ADMIN -->
+    <div id="painel-recuperar" style="display:none">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Recuperar senha do Organizador</div>
+      <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Informe a palavra/código de recuperação cadastrado no primeiro acesso.</div>
+      <div class="field"><label class="label">Código de recuperação</label><input class="input" id="rec-codigo" placeholder="Palavra ou código de recuperação"></div>
+      <div class="field"><label class="label">Nova senha (mín. 4 caracteres)</label><input class="input" id="rec-nova" type="password" placeholder="Nova senha"></div>
+      <div class="field"><label class="label">Confirmar nova senha</label><input class="input" id="rec-nova2" type="password" placeholder="Repita a nova senha"></div>
+      <div class="login-erro" id="rec-erro"></div>
+      <div style="height:8px"></div>
+      <button class="btn btn-primary" onclick="confirmarRecuperacaoAdmin()">Redefinir senha e entrar</button>
+      <div class="login-link" onclick="selecionarModoLogin('admin')">← Voltar ao login</div>
     </div>
-    <div class="sec-label">Critérios de avaliação</div>
-    <div id="lista-criterios-cfg"></div>
-    <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openCriterioModal()">+ Novo critério</button>
-    <div class="sec-label">Avaliadores cadastrados</div>
-    <div id="lista-avaliadores"></div>
-    <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openAvaliadorModal()">+ Novo avaliador</button>
-    <div class="sec-label">Senha do organizador</div>
-    <button class="btn btn-secondary btn-sm" onclick="openTrocarSenhaModal()">🔑 Alterar senha do organizador</button>
-    <div class="sec-label" style="margin-top:20px">Dados</div>
-    <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-danger btn-sm" onclick="confirmLimparProjetos()">🗑 Limpar todos os projetos</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-secondary btn-sm" onclick="resetApp()">🔄 Resetar app completo</button>
-  </div>
-
-  <div class="tabs" id="tabs-bar">
-    <button class="tab active" onclick="goTab('projetos',this)" data-tab="projetos"><span class="tab-icon">📋</span>Projetos</button>
-    <button class="tab" onclick="goTab('avaliacao',this)" data-tab="avaliacao"><span class="tab-icon">✏️</span>Avaliar</button>
-    <button class="tab" id="tab-resumo" onclick="goTab('resumo',this)" data-tab="resumo"><span class="tab-icon">📊</span>Resumo</button>
-    <button class="tab" id="tab-config" onclick="goTab('config',this)" data-tab="config"><span class="tab-icon">⚙️</span>Config</button>
   </div>
 </div>
 
