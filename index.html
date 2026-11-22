@@ -20,8 +20,7 @@
   --green:#7CC96A;--green2:#5AAD48;--green-bg:rgba(124,201,106,.12);
   --amber:#F0A500;--amber-bg:rgba(240,165,0,.12);
   --red:#E05C5C;--red-bg:rgba(224,92,92,.12);
-  --radius:12px;--radius-sm:8px;
-  --tab-h:64px;
+  --radius:12px;--radius-sm:8px;--tab-h:64px;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:'Inter',sans-serif;font-size:15px}
 #app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative}
@@ -90,9 +89,49 @@ textarea.input{resize:none;min-height:72px}
 .search-wrap{position:relative;margin-bottom:12px}
 .search-wrap .input{padding-left:36px}
 .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--fg3)}
+/* LOGIN */
+#tela-login{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;max-width:480px;margin:0 auto}
+#tela-login.oculta{display:none}
+.login-logo{font-size:48px;margin-bottom:16px}
+.login-titulo{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center}
+.login-sub{font-size:13px;color:var(--fg3);margin-bottom:32px;text-align:center}
+.login-box{width:100%;max-width:360px}
+.login-erro{color:var(--red);font-size:13px;text-align:center;margin-top:8px;min-height:20px}
+.avaliador-item{background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.avaliador-nome{font-size:13px;font-weight:600}
+.avaliador-user{font-size:11px;color:var(--fg3);margin-top:2px}
 </style>
 </head>
 <body>
+
+<!-- TELA DE LOGIN -->
+<div id="tela-login">
+  <div id="login-setup" style="width:100%;max-width:360px;display:none">
+    <div style="text-align:center;margin-bottom:24px">
+      <div class="login-logo">🎓</div>
+      <div class="login-titulo">Configuração inicial</div>
+      <div class="login-sub">Defina a senha do organizador para começar</div>
+    </div>
+    <div class="field"><label class="label">Senha do organizador</label><input class="input" id="setup-senha" type="password" placeholder="Crie uma senha forte"></div>
+    <div class="field"><label class="label">Confirmar senha</label><input class="input" id="setup-senha2" type="password" placeholder="Digite novamente"></div>
+    <div class="login-erro" id="setup-erro"></div>
+    <div style="height:8px"></div>
+    <button class="btn btn-primary" onclick="confirmarSetup()">Criar senha e entrar</button>
+  </div>
+  <div id="login-form" style="width:100%;max-width:360px;display:none">
+    <div style="text-align:center;margin-bottom:24px">
+      <div class="login-logo">🎓</div>
+      <div class="login-titulo">Avaliação Acadêmica</div>
+      <div class="login-sub">Faça login para continuar</div>
+    </div>
+    <div class="field"><label class="label">Usuário</label><input class="input" id="login-user" placeholder="Ex: avaliador1 ou admin" autocomplete="username"></div>
+    <div class="field"><label class="label">Senha</label><input class="input" id="login-pass" type="password" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
+    <div class="login-erro" id="login-erro"></div>
+    <div style="height:8px"></div>
+    <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
+  </div>
+</div>
+
 <div id="app">
   <div class="header">
     <div class="header-top">
@@ -100,7 +139,11 @@ textarea.input{resize:none;min-height:72px}
         <div class="header-title" id="hdr-title">Avaliação Acadêmica</div>
         <div class="header-sub" id="hdr-sub">Nenhum evento ativo</div>
       </div>
-      <button class="btn-icon" onclick="openEventModal()">⚙️</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="hdr-perfil" style="font-size:11px;color:var(--fg3)"></span>
+        <button class="btn-icon" onclick="fazerLogout()" title="Sair">🚪</button>
+        <button class="btn-icon" id="btn-cfg-header" onclick="openEventModal()" style="display:none">⚙️</button>
+      </div>
     </div>
   </div>
 
@@ -111,7 +154,7 @@ textarea.input{resize:none;min-height:72px}
       <input class="input" id="busca-input" placeholder="Buscar por nome ou grupo..." oninput="renderProjetos()">
     </div>
     <div id="lista-projetos"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+    <div id="botoes-projetos" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
       <button class="btn btn-secondary" onclick="openAddProjetoModal(false)">+ Adicionar</button>
       <button class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
       <button class="btn btn-secondary" style="grid-column:span 2;background:var(--bg3);border:1px solid rgba(124,201,106,.3);color:var(--green)" onclick="abrirLeitorQR()">📷 Ler QR Code do projeto</button>
@@ -137,11 +180,11 @@ textarea.input{resize:none;min-height:72px}
     <div class="sec-label">Critérios de avaliação</div>
     <div id="lista-criterios-cfg"></div>
     <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openCriterioModal()">+ Novo critério</button>
-    <div class="sec-label">Avaliador</div>
-    <div class="field"><input class="input" id="cfg-avaliador" placeholder="Seu nome ou identificação" oninput="saveAvaliador()"></div>
-    <div class="sec-label">PIN do avaliador</div>
-    <div class="field"><input class="input" id="cfg-pin" type="password" placeholder="PIN para liberar avaliação" oninput="savePIN()"></div>
-    <div style="font-size:12px;color:var(--fg3);margin-top:-6px;margin-bottom:12px">Quem abrir o app via QR Code precisará digitar este PIN para avaliar.</div>
+    <div class="sec-label">Avaliadores cadastrados</div>
+    <div id="lista-avaliadores"></div>
+    <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openAvaliadorModal()">+ Novo avaliador</button>
+    <div class="sec-label">Senha do organizador</div>
+    <button class="btn btn-secondary btn-sm" onclick="openTrocarSenhaModal()">🔑 Trocar senha do admin</button>
     <div class="sec-label" style="margin-top:20px">Dados</div>
     <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
     <div style="height:8px"></div>
@@ -150,11 +193,11 @@ textarea.input{resize:none;min-height:72px}
     <button class="btn btn-secondary btn-sm" onclick="resetApp()">🔄 Resetar app completo</button>
   </div>
 
-  <div class="tabs">
+  <div class="tabs" id="tabs-bar">
     <button class="tab active" onclick="goTab('projetos',this)" data-tab="projetos"><span class="tab-icon">📋</span>Projetos</button>
     <button class="tab" onclick="goTab('avaliacao',this)" data-tab="avaliacao"><span class="tab-icon">✏️</span>Avaliar</button>
-    <button class="tab" onclick="goTab('resumo',this)" data-tab="resumo"><span class="tab-icon">📊</span>Resumo</button>
-    <button class="tab" onclick="goTab('config',this)" data-tab="config"><span class="tab-icon">⚙️</span>Config</button>
+    <button class="tab" id="tab-resumo" onclick="goTab('resumo',this)" data-tab="resumo"><span class="tab-icon">📊</span>Resumo</button>
+    <button class="tab" id="tab-config" onclick="goTab('config',this)" data-tab="config"><span class="tab-icon">⚙️</span>Config</button>
   </div>
 </div>
 
@@ -249,6 +292,37 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
+<!-- MODAL AVALIADOR -->
+<div class="overlay" id="modal-avaliador">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Novo avaliador</div>
+    <div class="field"><label class="label">Nome completo</label><input class="input" id="av-nome" placeholder="Ex: Prof. João Silva"></div>
+    <div class="field"><label class="label">Usuário (para login)</label><input class="input" id="av-user" placeholder="Ex: joao ou avaliador1"></div>
+    <div class="field"><label class="label">Senha</label><input class="input" id="av-pass" type="password" placeholder="Crie uma senha"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-avaliador')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAvaliador()">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TROCAR SENHA ADMIN -->
+<div class="overlay" id="modal-trocar-senha">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Trocar senha do organizador</div>
+    <div class="field"><label class="label">Senha atual</label><input class="input" id="ts-atual" type="password" placeholder="Senha atual"></div>
+    <div class="field"><label class="label">Nova senha</label><input class="input" id="ts-nova" type="password" placeholder="Nova senha"></div>
+    <div class="field"><label class="label">Confirmar nova senha</label><input class="input" id="ts-nova2" type="password" placeholder="Repita a nova senha"></div>
+    <div class="login-erro" id="ts-erro"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-trocar-senha')">Cancelar</button>
+      <button class="btn btn-primary" onclick="trocarSenhaAdmin()">Salvar nova senha</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
 let db=null,fbReady=false;
@@ -268,22 +342,36 @@ async function initFirebase(){
     db=firebase.database();fbReady=true;
     db.ref('sessao').on('value',snap=>{
       const data=snap.val();
-      if(data){const prev=state.projetoAtivo;state={...state,...data,projetoAtivo:prev};renderAll();
+      if(data){
+        const prev=state.projetoAtivo;
+        state={...state,...data,projetoAtivo:prev};
+        renderAll();
         const t=document.querySelector('.tab.active');const tn=t?t.dataset.tab:'';
-        if(tn==='avaliacao')renderAvaliacao();if(tn==='resumo')renderResumo();}
+        if(tn==='avaliacao')renderAvaliacao();if(tn==='resumo')renderResumo();
+      }
     });
     showSyncStatus('🟢 Conectado — sync ativo');
   }catch(e){showSyncStatus('🔴 Modo local');}
 }
 
-let state={evento:null,avaliador:'',pin:'',projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null};
-let pinAutenticado=false;
+// ========== ESTADO ==========
+let state={
+  evento:null,projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null,
+  adminSenha:'',avaliadores:[]
+};
+let sessaoAtual=null; // {user, perfil:'admin'|'avaliador', nome}
 
 function save(){
   try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
   if(fbReady&&db){
-    const s={evento:state.evento,avaliador:state.avaliador,projetos:state.projetos,criterios:state.criterios,avaliacoes:state.avaliacoes};
-    db.ref('sessao').set(s).catch(e=>console.warn(e));showSyncStatus('☁️ Salvo na nuvem');}
+    const s={evento:state.evento,projetos:state.projetos,criterios:state.criterios,avaliacoes:state.avaliacoes};
+    db.ref('sessao').set(s).catch(e=>console.warn(e));
+    showSyncStatus('☁️ Salvo na nuvem');
+  }
+}
+
+function saveLocal(){
+  try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
 }
 
 function load(){
@@ -297,56 +385,178 @@ function load(){
     }
   }catch(e){
     try{localStorage.clear();}catch(e2){}
-    console.warn('localStorage corrompido, limpado.');
+  }
+  // Restaurar sessão
+  try{
+    var s=localStorage.getItem('avaliacao_sessao');
+    if(s)sessaoAtual=JSON.parse(s);
+  }catch(e){}
+}
+
+// ========== LOGIN ==========
+function iniciarTela(){
+  if(!state.adminSenha){
+    document.getElementById('login-setup').style.display='block';
+    document.getElementById('login-form').style.display='none';
+  } else {
+    document.getElementById('login-setup').style.display='none';
+    document.getElementById('login-form').style.display='block';
   }
 }
 
-function resetApp(){
-  if(confirm('Resetar o app completamente? Todos os dados locais serão apagados.')){
-    try{localStorage.clear();}catch(e){}
-    if(fbReady&&db){db.ref('sessao').remove();}
-    state={evento:null,avaliador:'',pin:'',projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null};
-    pinAutenticado=false;
-    state.criterios=[
-      {id:'c1',eixo:'Apresentação',nome:'Explanação Oral e Didática',desc:'Clareza, postura, gestão do tempo',max:1.0},
-      {id:'c2',eixo:'Apresentação',nome:'Conhecimento Técnico',desc:'Domínio sobre o assunto apresentado',max:1.5},
-      {id:'c3',eixo:'Apresentação',nome:'Clareza: Problema e Objetivos',desc:'Delimitação e relevância da proposta',max:1.5},
-      {id:'c4',eixo:'Protótipo',nome:'Complexidade Técnica',desc:'Integração e exigência lógica',max:1.5},
-      {id:'c5',eixo:'Protótipo',nome:'Materiais e Componentes',desc:'Dimensionamento e segurança',max:1.0},
-      {id:'c6',eixo:'Protótipo',nome:'Protótipo Finalizado',desc:'Conclusão, operação e acabamento',max:2.0},
-      {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
-    ];
-    renderAll();
-    showSyncStatus('🔄 App resetado com sucesso');
+function confirmarSetup(){
+  const s1=document.getElementById('setup-senha').value;
+  const s2=document.getElementById('setup-senha2').value;
+  const err=document.getElementById('setup-erro');
+  if(!s1){err.textContent='Digite uma senha.';return;}
+  if(s1!==s2){err.textContent='As senhas não coincidem.';return;}
+  if(s1.length<4){err.textContent='Senha muito curta (mínimo 4 caracteres).';return;}
+  state.adminSenha=s1;
+  saveLocal();
+  entrarComoAdmin();
+}
+
+function fazerLogin(){
+  const user=document.getElementById('login-user').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-erro');
+  err.textContent='';
+  if(!user||!pass){err.textContent='Preencha usuário e senha.';return;}
+  // Verifica admin
+  if(user==='admin'&&pass===state.adminSenha){
+    entrarComoAdmin();return;
+  }
+  // Verifica avaliadores
+  const av=state.avaliadores.find(a=>a.user.toLowerCase()===user&&a.pass===pass);
+  if(av){
+    sessaoAtual={user:av.user,perfil:'avaliador',nome:av.nome};
+    localStorage.setItem('avaliacao_sessao',JSON.stringify(sessaoAtual));
+    abrirApp();return;
+  }
+  err.textContent='Usuário ou senha incorretos.';
+  document.getElementById('login-pass').value='';
+}
+
+function entrarComoAdmin(){
+  sessaoAtual={user:'admin',perfil:'admin',nome:'Organizador'};
+  localStorage.setItem('avaliacao_sessao',JSON.stringify(sessaoAtual));
+  abrirApp();
+}
+
+function abrirApp(){
+  document.getElementById('tela-login').classList.add('oculta');
+  aplicarPermissoes();
+  renderAll();
+  setTimeout(initFirebase,500);
+  setTimeout(verificarURLParams,1000);
+}
+
+function fazerLogout(){
+  if(!confirm('Deseja sair?'))return;
+  sessaoAtual=null;
+  localStorage.removeItem('avaliacao_sessao');
+  document.getElementById('tela-login').classList.remove('oculta');
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-erro').textContent='';
+  if(db)db.ref('sessao').off();
+  fbReady=false;db=null;
+}
+
+function aplicarPermissoes(){
+  const isAdmin=sessaoAtual&&sessaoAtual.perfil==='admin';
+  document.getElementById('tab-resumo').style.display=isAdmin?'':'none';
+  document.getElementById('tab-config').style.display=isAdmin?'':'none';
+  document.getElementById('btn-cfg-header').style.display=isAdmin?'flex':'none';
+  document.getElementById('hdr-perfil').textContent=sessaoAtual?(isAdmin?'👑 Admin':'✏️ '+sessaoAtual.nome):'';
+  // Botões de adicionar/importar — só admin
+  const bp=document.getElementById('botoes-projetos');
+  if(bp){
+    const btns=bp.querySelectorAll('button:not([onclick*="abrirLeitorQR"])');
+    btns.forEach(b=>b.style.display=isAdmin?'':'none');
   }
 }
 
+// ========== RESET / SETUP ==========
 (function(){
   var p=new URLSearchParams(window.location.search);
   if(p.get('reset')==='1'){
     try{localStorage.clear();}catch(e){}
     window.history.replaceState({},'',window.location.pathname);
-    showSyncStatus('🔄 App resetado com sucesso');
   }
 })();
 
 load();
-setTimeout(initFirebase,500);
-setTimeout(verificarURLParams,1000);
 
-if(!state.criterios||!state.criterios.length){state.criterios=[
-  {id:'c1',eixo:'Apresentação',nome:'Explanação Oral e Didática',desc:'Clareza, postura, gestão do tempo',max:1.0},
-  {id:'c2',eixo:'Apresentação',nome:'Conhecimento Técnico',desc:'Domínio sobre o assunto apresentado',max:1.5},
-  {id:'c3',eixo:'Apresentação',nome:'Clareza: Problema e Objetivos',desc:'Delimitação e relevância da proposta',max:1.5},
-  {id:'c4',eixo:'Protótipo',nome:'Complexidade Técnica',desc:'Integração e exigência lógica',max:1.5},
-  {id:'c5',eixo:'Protótipo',nome:'Materiais e Componentes',desc:'Dimensionamento e segurança',max:1.0},
-  {id:'c6',eixo:'Protótipo',nome:'Protótipo Finalizado',desc:'Conclusão, operação e acabamento',max:2.0},
-  {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
-];}
-if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
-if(state.pin)document.getElementById('cfg-pin').value=state.pin;
-renderAll();
+if(!state.criterios||!state.criterios.length){
+  state.criterios=[
+    {id:'c1',eixo:'Apresentação',nome:'Explanação Oral e Didática',desc:'Clareza, postura, gestão do tempo',max:1.0},
+    {id:'c2',eixo:'Apresentação',nome:'Conhecimento Técnico',desc:'Domínio sobre o assunto apresentado',max:1.5},
+    {id:'c3',eixo:'Apresentação',nome:'Clareza: Problema e Objetivos',desc:'Delimitação e relevância da proposta',max:1.5},
+    {id:'c4',eixo:'Protótipo',nome:'Complexidade Técnica',desc:'Integração e exigência lógica',max:1.5},
+    {id:'c5',eixo:'Protótipo',nome:'Materiais e Componentes',desc:'Dimensionamento e segurança',max:1.0},
+    {id:'c6',eixo:'Protótipo',nome:'Protótipo Finalizado',desc:'Conclusão, operação e acabamento',max:2.0},
+    {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
+  ];
+}
 
+// Verifica se já tem sessão salva
+if(sessaoAtual){
+  abrirApp();
+} else {
+  iniciarTela();
+}
+
+// ========== AVALIADORES ==========
+function openAvaliadorModal(){
+  ['av-nome','av-user','av-pass'].forEach(id=>document.getElementById(id).value='');
+  openModal('modal-avaliador');
+}
+function salvarAvaliador(){
+  const nome=document.getElementById('av-nome').value.trim();
+  const user=document.getElementById('av-user').value.trim().toLowerCase();
+  const pass=document.getElementById('av-pass').value;
+  if(!nome||!user||!pass){alert('Preencha todos os campos.');return;}
+  if(user==='admin'){alert('Usuário "admin" é reservado.');return;}
+  if(state.avaliadores.find(a=>a.user===user)){alert('Usuário já cadastrado.');return;}
+  if(state.avaliadores.length>=3){alert('Máximo de 3 avaliadores atingido.');return;}
+  state.avaliadores.push({id:uid(),nome,user,pass});
+  saveLocal();renderConfig();closeModal('modal-avaliador');
+  showSyncStatus('✅ Avaliador cadastrado');
+}
+function removerAvaliador(id){
+  if(!confirm('Remover este avaliador?'))return;
+  state.avaliadores=state.avaliadores.filter(a=>a.id!==id);
+  saveLocal();renderConfig();
+}
+
+function openTrocarSenhaModal(){
+  ['ts-atual','ts-nova','ts-nova2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ts-erro').textContent='';
+  openModal('modal-trocar-senha');
+}
+function trocarSenhaAdmin(){
+  const atual=document.getElementById('ts-atual').value;
+  const nova=document.getElementById('ts-nova').value;
+  const nova2=document.getElementById('ts-nova2').value;
+  const err=document.getElementById('ts-erro');
+  if(atual!==state.adminSenha){err.textContent='Senha atual incorreta.';return;}
+  if(!nova||nova.length<4){err.textContent='Nova senha muito curta.';return;}
+  if(nova!==nova2){err.textContent='As senhas não coincidem.';return;}
+  state.adminSenha=nova;
+  saveLocal();closeModal('modal-trocar-senha');
+  showSyncStatus('✅ Senha alterada com sucesso');
+}
+
+function resetApp(){
+  if(confirm('Resetar o app completamente? Todos os dados serão apagados.')){
+    try{localStorage.clear();}catch(e){}
+    if(fbReady&&db){db.ref('sessao').remove();}
+    location.reload();
+  }
+}
+
+// ========== RENDER ==========
 function uid(){return Math.random().toString(36).slice(2,9);}
 function nota(pid){const av=state.avaliacoes[pid]||{};return state.criterios.reduce((s,c)=>s+(parseFloat(av[c.id])||0),0);}
 function notaMax(){return state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);}
@@ -357,12 +567,14 @@ function statusProjeto(pid){
 }
 
 function goTab(tab,el){
+  const isAdmin=sessaoAtual&&sessaoAtual.perfil==='admin';
+  if((tab==='resumo'||tab==='config')&&!isAdmin)return;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('screen-'+tab).classList.add('active');el.classList.add('active');
   if(tab==='avaliacao')renderAvaliacao();if(tab==='resumo')renderResumo();if(tab==='config')renderConfig();
 }
-function renderAll(){renderHeader();renderProjetos();renderConfig();}
+function renderAll(){renderHeader();renderProjetos();aplicarPermissoes();}
 
 function renderHeader(){
   const ev=state.evento;
@@ -375,7 +587,7 @@ function renderHeader(){
 
 function renderProjetos(){
   const q=(document.getElementById('busca-input').value||'').toLowerCase();
-  const list=state.projetos.filter(p=>!q||p.titulo.toLowerCase().includes(q)||p.grupo.toLowerCase().includes(q)||p.integrantes.toLowerCase().includes(q));
+  const list=state.projetos.filter(p=>!q||p.titulo.toLowerCase().includes(q)||p.grupo.toLowerCase().includes(q)||(p.integrantes||'').toLowerCase().includes(q));
   const el=document.getElementById('lista-projetos');
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Nenhum projeto</div><div class="empty-sub">Adicione ou importe projetos.</div></div>';return;}
   const max=notaMax();
@@ -383,13 +595,12 @@ function renderProjetos(){
     const st=statusProjeto(p.id);
     const bm={concluido:'<span class="badge badge-green">✓ '+nota(p.id).toFixed(1)+'</span>',parcial:'<span class="badge badge-amber">Em andamento</span>',pendente:'<span class="badge badge-muted">Pendente</span>'};
     const at=p.adhoc?'<span class="adhoc-tag">★ Ad hoc</span> ':'';
-    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub" style="margin-top:3px">'+p.integrantes+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,(nota(p.id)/max)*100)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
+    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub" style="margin-top:3px">'+(p.integrantes||'')+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,(nota(p.id)/max)*100)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
   }).join('');
 }
 
 function selecionarProjeto(pid){
   state.projetoAtivo=pid;
-  if(!state._abriuViaQR)pinAutenticado=true;
   goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));
 }
 
@@ -398,23 +609,11 @@ function renderAvaliacao(){
   if(!state.projetoAtivo){el.innerHTML='<div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Nenhum projeto selecionado</div><div class="empty-sub">Selecione um projeto na aba Projetos.</div></div>';return;}
   const p=state.projetos.find(x=>x.id===state.projetoAtivo);
   if(!p){el.innerHTML='';return;}
-  if(state.pin&&!pinAutenticado&&state._abriuViaQR){
-    el.innerHTML='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>'
-      +'<div class="card" style="margin-top:8px">'
-      +'<div style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center">🔒 Área restrita</div>'
-      +'<div style="font-size:13px;color:var(--fg2);margin-bottom:14px;text-align:center">Digite o PIN do avaliador para continuar</div>'
-      +'<div class="field"><input class="input" id="pin-input" type="password" placeholder="PIN" style="text-align:center;font-size:20px;letter-spacing:4px" onkeydown="if(event.key===\'Enter\')verificarPIN()"></div>'
-      +'<div id="pin-erro" style="color:var(--red);font-size:12px;text-align:center;margin-bottom:8px;display:none">PIN incorreto. Tente novamente.</div>'
-      +'<button class="btn btn-primary" onclick="verificarPIN()">Entrar</button>'
-      +'</div>';
-    setTimeout(()=>{const i=document.getElementById('pin-input');if(i)i.focus();},100);
-    return;
-  }
   const av=state.avaliacoes[p.id]||{};
   const max=notaMax();const total=nota(p.id);
   const eixos={};
   state.criterios.forEach(c=>{const k=c.eixo||'Critérios';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
-  let html='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>';
+  let html='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>';
   Object.entries(eixos).forEach(([eixo,crits])=>{
     const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
     html+='<div class="sec-label">'+eixo+' <span style="font-weight:400;color:var(--fg3)">(máx '+em.toFixed(1)+')</span></div>';
@@ -443,9 +642,9 @@ function renderResumo(){
     html+='<div class="card" style="text-align:center;margin-bottom:14px;padding:16px"><div style="font-size:12px;color:var(--fg3);margin-bottom:4px">Média geral</div><div class="nota-grande">'+media.toFixed(2)+'</div><div style="font-size:12px;color:var(--fg3);margin-top:4px">de '+max.toFixed(1)+' pontos</div></div>';
     const rank=[...state.projetos].filter(p=>statusProjeto(p.id)==='concluido').sort((a,b)=>nota(b.id)-nota(a.id));
     html+='<div class="sec-label">Ranking</div>';
-    rank.forEach((p,i)=>{const n=nota(p.id);const pct=max>0?(n/max)*100:0;const m=['🥇','🥈','🥉'];html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(m[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+n.toFixed(1)+'</div></div></div>';});
+    rank.forEach((p,i)=>{const n=nota(p.id);const pct=max>0?(n/max)*100:0;const m=['🥇','🥈','🥉'];html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(m[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+n.toFixed(1)+'</div></div></div>';});
   }
-  if(pend.length){html+='<div class="sec-label">Pendentes</div>';pend.forEach(p=>{html+='<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div></div><span class="badge badge-amber">'+(statusProjeto(p.id)==='parcial'?'Parcial':'Pendente')+'</span></div></div>';});}
+  if(pend.length){html+='<div class="sec-label">Pendentes</div>';pend.forEach(p=>{html+='<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div></div><span class="badge badge-amber">'+(statusProjeto(p.id)==='parcial'?'Parcial':'Pendente')+'</span></div></div>';});}
   if(!state.projetos.length)html='<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione projetos e avalie para ver o resumo.</div></div>';
   html+='<div style="height:8px"></div><button class="btn btn-secondary" onclick="exportarCSV()">↓ Exportar CSV</button><div style="height:8px"></div>';
   el.innerHTML=html;
@@ -456,32 +655,32 @@ function renderConfig(){
   document.getElementById('cfg-nome').textContent=ev?ev.nome:'Sem evento configurado';
   let info=[];if(ev){if(ev.inst)info.push(ev.inst);if(ev.disc)info.push(ev.disc);if(ev.data)info.push(ev.data);}
   document.getElementById('cfg-info').textContent=info.join(' · ');
-  if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
-  if(state.pin)document.getElementById('cfg-pin').value=state.pin;
+  // Critérios
   const el=document.getElementById('lista-criterios-cfg');
-  if(!state.criterios.length){el.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum critério configurado.</div>';return;}
-  const eixos={};state.criterios.forEach(c=>{const k=c.eixo||'Sem eixo';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
-  let html='';
-  Object.entries(eixos).forEach(([eixo,crits])=>{
-    const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
-    html+='<div style="font-size:11px;color:var(--fg3);margin:10px 0 5px;font-weight:600">'+eixo+' — máx '+em.toFixed(1)+'</div>';
-    crits.forEach(c=>{html+='<div class="crit-item"><div class="crit-item-info"><div class="crit-item-name">'+c.nome+'</div><div class="crit-item-meta">'+(c.desc?c.desc+' · ':'')+'Máx: '+c.max+'</div></div><button class="crit-remove" onclick="removerCriterio(\''+c.id+'\')">🗑</button></div>';});
-  });
-  const tm=state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);
-  html+='<div style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600">Total máximo: '+tm.toFixed(1)+' pontos</div>';
-  el.innerHTML=html;
+  if(!state.criterios.length){el.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum critério configurado.</div>';}
+  else{
+    const eixos={};state.criterios.forEach(c=>{const k=c.eixo||'Sem eixo';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
+    let html='';
+    Object.entries(eixos).forEach(([eixo,crits])=>{
+      const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
+      html+='<div style="font-size:11px;color:var(--fg3);margin:10px 0 5px;font-weight:600">'+eixo+' — máx '+em.toFixed(1)+'</div>';
+      crits.forEach(c=>{html+='<div class="crit-item"><div class="crit-item-info"><div class="crit-item-name">'+c.nome+'</div><div class="crit-item-meta">'+(c.desc?c.desc+' · ':'')+'Máx: '+c.max+'</div></div><button class="crit-remove" onclick="removerCriterio(\''+c.id+'\')">🗑</button></div>';});
+    });
+    const tm=state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);
+    html+='<div style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600">Total máximo: '+tm.toFixed(1)+' pontos</div>';
+    el.innerHTML=html;
+  }
+  // Avaliadores
+  const ela=document.getElementById('lista-avaliadores');
+  if(!state.avaliadores.length){ela.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum avaliador cadastrado.</div>';}
+  else{
+    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-item"><div><div class="avaliador-nome">'+a.nome+'</div><div class="avaliador-user">@'+a.user+'</div></div><button class="crit-remove" onclick="removerAvaliador(\''+a.id+'\')">🗑</button></div>').join('');
+  }
 }
 
-function saveAvaliador(){state.avaliador=document.getElementById('cfg-avaliador').value;save();}
-function savePIN(){state.pin=document.getElementById('cfg-pin').value;save();}
-function verificarPIN(){
-  const digitado=document.getElementById('pin-input').value;
-  if(digitado===state.pin){pinAutenticado=true;renderAvaliacao();}
-  else{const e=document.getElementById('pin-erro');if(e)e.style.display='block';const i=document.getElementById('pin-input');if(i){i.value='';i.focus();}}
-}
 function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save();renderConfig();}
 function confirmLimpar(){if(confirm('Apagar todas as avaliações?')){state.avaliacoes={};save();renderAll();}}
-function confirmLimparProjetos(){if(confirm('Apagar TODOS os projetos e avaliações? Esta ação não pode ser desfeita.')){state.projetos=[];state.avaliacoes={};save();renderAll();showSyncStatus('🗑 Projetos removidos');}}
+function confirmLimparProjetos(){if(confirm('Apagar TODOS os projetos e avaliações?')){state.projetos=[];state.avaliacoes={};save();renderAll();showSyncStatus('🗑 Projetos removidos');}}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
@@ -518,6 +717,7 @@ function salvarCriterio(){
   save();renderConfig();closeModal('modal-criterio');
 }
 
+// ========== QR CODE ==========
 let qrStream=null,qrInterval=null;
 function abrirLeitorQR(){
   openModal('modal-qr');
@@ -533,13 +733,11 @@ function abrirLeitorQR(){
           qrInterval=setInterval(lerFrameQR,300);
         }).catch(function(err){
           document.getElementById('qr-status').textContent='Erro ao iniciar vídeo: '+err.message;
-          document.getElementById('qr-status').style.color='var(--red)';
         });
       };
     })
     .catch(function(err){
       document.getElementById('qr-status').textContent='Câmera não disponível: '+err.message;
-      document.getElementById('qr-status').style.color='var(--red)';
     });
 }
 function lerFrameQR(){
@@ -556,29 +754,19 @@ function processarQR(texto){
   var id=null;
   try{var url=new URL(texto);id=url.searchParams.get('projeto');}
   catch(e){if(texto.startsWith('adhoc_')||texto.length<30)id=texto;}
-  if(!id){alert('QR Code não reconhecido: '+texto);return;}
+  if(!id){alert('QR Code não reconhecido.');return;}
   var existe=state.projetos.find(function(p){return p.id===id;});
-  if(existe){
-    state._abriuViaQR=true;
-    pinAutenticado=false;
-    selecionarProjeto(id);
-    showSyncStatus('✅ Projeto selecionado via QR');
-    return;
-  }
+  if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
   buscarProjetoFirebase(id);
 }
 function buscarProjetoFirebase(id){
-  if(!fbReady||!db){alert('Sem conexão com Firebase. Verifique a internet.');return;}
+  if(!fbReady||!db){alert('Sem conexão com Firebase.');return;}
   showSyncStatus('🔄 Buscando projeto...');
   db.ref('projetos/'+id).once('value',function(snap){
     var p=snap.val();
-    if(!p){alert('Projeto não encontrado no Firebase. ID: '+id);return;}
-    state.projetos.push(p);
-    save();
-    renderProjetos();
+    if(!p){alert('Projeto não encontrado. ID: '+id);return;}
+    state.projetos.push(p);save();renderProjetos();
     showSyncStatus('✅ Importado via QR');
-    state._abriuViaQR=true;
-    pinAutenticado=false;
     selecionarProjeto(id);
   });
 }
@@ -590,12 +778,12 @@ function fecharLeitorQR(){
 }
 function verificarURLParams(){
   var params=new URLSearchParams(window.location.search);var pid=params.get('projeto');if(!pid)return;
-  state._abriuViaQR=true;pinAutenticado=false;
   var existe=state.projetos.find(function(p){return p.id===pid;});
   if(existe){state.projetoAtivo=pid;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));showSyncStatus('✅ Projeto aberto via QR');}
   else setTimeout(function(){buscarProjetoFirebase(pid);},1500);
 }
 
+// ========== EXCEL / CSV ==========
 let importRows=[],importCols=[];
 function importarExcel(input){
   const file=input.files[0];if(!file)return;input.value='';
