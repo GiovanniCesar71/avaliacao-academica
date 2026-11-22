@@ -365,6 +365,7 @@ function escapeAttr(val){
 }
 
 // ========== FIREBASE ==========
+// ========== FIREBASE ==========
 const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
 let db=null,fbReady=false,obsTimer=null;
 
@@ -390,11 +391,14 @@ async function initFirebase(){
         if(data.projetos!==undefined)state.projetos=Array.isArray(data.projetos)?data.projetos:[];
         if(data.criterios!==undefined)state.criterios=Array.isArray(data.criterios)?data.criterios:[];
         if(data.avaliacoes!==undefined)state.avaliacoes=data.avaliacoes||{};
+        if(data.avaliadores!==undefined)state.avaliadores=Array.isArray(data.avaliadores)?data.avaliadores:[];
+        if(data.adminSenha&&!state.adminSenha)state.adminSenha=data.adminSenha;
         state.projetoAtivo=prev;
         saveLocal();
         renderHeader();
         renderProjetos();
         aplicarPermissoes();
+        if(document.getElementById('screen-config').classList.contains('active'))renderConfig();
       }
     });
     showSyncStatus('🟢 Conectado');
@@ -430,27 +434,25 @@ function save(pathHint){
     db.ref('sessao/projetos').set(state.projetos).catch(e=>console.warn(e));
   }else if(pathHint==='criterios'){
     db.ref('sessao/criterios').set(state.criterios).catch(e=>console.warn(e));
+  }else if(pathHint==='avaliadores'){
+    db.ref('sessao/avaliadores').set(state.avaliadores).catch(e=>console.warn(e));
   }else if(pathHint&&pathHint.pid&&pathHint.user){
     const entry=(state.avaliacoes[pathHint.pid]&&state.avaliacoes[pathHint.pid][pathHint.user])||null;
     db.ref('sessao/avaliacoes/'+pathHint.pid+'/'+pathHint.user).set(entry).catch(e=>console.warn(e));
   }else{
-    const s={evento:state.evento,projetos:state.projetos,criterios:state.criterios,avaliacoes:state.avaliacoes};
+    const s={
+      evento:state.evento,
+      projetos:state.projetos,
+      criterios:state.criterios,
+      avaliacoes:state.avaliacoes,
+      avaliadores:state.avaliadores,
+      adminSenha:state.adminSenha||''
+    };
     db.ref('sessao').set(s).catch(e=>console.warn(e));
   }
   showSyncStatus('☁️ Salvo');
 }
-
-function load(){
-  try{
-    var d=localStorage.getItem('avaliacao_app');
-    if(d){var p=JSON.parse(d);if(p&&typeof p==='object'&&!Array.isArray(p))state={...state,...p};}
-  }catch(e){try{localStorage.clear();}catch(e2){}}
-  try{
-    var s=localStorage.getItem('avaliacao_sessao');
-    if(s)sessaoAtual=JSON.parse(s);
-  }catch(e){}
-}
-
+  
 // ========== LOGIN ==========
 function mostrarPainelLogin(){
   document.getElementById('painel-login').style.display='block';
