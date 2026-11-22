@@ -144,6 +144,8 @@ textarea.input{resize:none;min-height:72px}
     <div style="font-size:12px;color:var(--fg3);margin-top:-6px;margin-bottom:12px">Quem abrir o app via QR Code precisará digitar este PIN para avaliar.</div>
     <div class="sec-label" style="margin-top:20px">Dados</div>
     <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-danger btn-sm" onclick="confirmLimparProjetos()">🗑 Limpar todos os projetos</button>
   </div>
 
   <div class="tabs">
@@ -199,7 +201,7 @@ textarea.input{resize:none;min-height:72px}
     <div class="modal-title">📷 Ler QR Code do projeto</div>
     <div id="qr-status" style="font-size:13px;color:var(--fg2);margin-bottom:12px;text-align:center">Aponte a câmera para o QR Code</div>
     <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1">
-      <video id="qr-video" style="width:100%;height:100%;object-fit:cover" playsinline></video>
+      <video id="qr-video" style="width:100%;height:100%;object-fit:cover" playsinline muted></video>
       <canvas id="qr-canvas" style="display:none"></canvas>
       <div style="position:absolute;inset:0;border:2px solid var(--green);border-radius:12px;pointer-events:none;box-shadow:inset 0 0 0 40px rgba(0,0,0,.4)">
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border:3px solid var(--green);border-radius:8px"></div>
@@ -347,7 +349,6 @@ function renderAvaliacao(){
   if(!state.projetoAtivo){el.innerHTML='<div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Nenhum projeto selecionado</div><div class="empty-sub">Selecione um projeto na aba Projetos.</div></div>';return;}
   const p=state.projetos.find(x=>x.id===state.projetoAtivo);
   if(!p){el.innerHTML='';return;}
-  // Bloqueia se veio via QR e PIN está configurado e não autenticou
   if(state.pin&&!pinAutenticado&&state._abriuViaQR){
     el.innerHTML='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>'
       +'<div class="card" style="margin-top:8px">'
@@ -377,186 +378,4 @@ function renderAvaliacao(){
   el.innerHTML=html;
 }
 
-function gerarValores(max){const s=Math.round(max/0.5)+1;const v=[];for(let i=0;i<s;i++)v.push(parseFloat((i*max/(s-1)).toFixed(1)));return[...new Set(v)];}
-function setNota(pid,cid,val){if(!state.avaliacoes[pid])state.avaliacoes[pid]={};state.avaliacoes[pid][cid]=val;save();renderAvaliacao();renderProjetos();}
-function setObs(pid,val){if(!state.avaliacoes[pid])state.avaliacoes[pid]={};state.avaliacoes[pid].obs=val;save();}
-function concluirAvaliacao(pid){save();goTab('projetos',document.querySelector('[data-tab="projetos"]'));}
-
-function renderResumo(){
-  const el=document.getElementById('resumo-content');
-  const max=notaMax();
-  const conc=state.projetos.filter(p=>statusProjeto(p.id)==='concluido');
-  const pend=state.projetos.filter(p=>statusProjeto(p.id)!=='concluido');
-  const media=conc.length?conc.reduce((s,p)=>s+nota(p.id),0)/conc.length:0;
-  let html='<div class="sec-label">Visão geral</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px">'+state.projetos.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Total</div></div><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--green)">'+conc.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Avaliados</div></div><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--amber)">'+pend.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Pendentes</div></div></div>';
-  if(conc.length){
-    html+='<div class="card" style="text-align:center;margin-bottom:14px;padding:16px"><div style="font-size:12px;color:var(--fg3);margin-bottom:4px">Média geral</div><div class="nota-grande">'+media.toFixed(2)+'</div><div style="font-size:12px;color:var(--fg3);margin-top:4px">de '+max.toFixed(1)+' pontos</div></div>';
-    const rank=[...state.projetos].filter(p=>statusProjeto(p.id)==='concluido').sort((a,b)=>nota(b.id)-nota(a.id));
-    html+='<div class="sec-label">Ranking</div>';
-    rank.forEach((p,i)=>{const n=nota(p.id);const pct=max>0?(n/max)*100:0;const m=['🥇','🥈','🥉'];html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(m[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+n.toFixed(1)+'</div></div></div>';});
-  }
-  if(pend.length){html+='<div class="sec-label">Pendentes</div>';pend.forEach(p=>{html+='<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div></div><span class="badge badge-amber">'+(statusProjeto(p.id)==='parcial'?'Parcial':'Pendente')+'</span></div></div>';});}
-  if(!state.projetos.length)html='<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione projetos e avalie para ver o resumo.</div></div>';
-  html+='<div style="height:8px"></div><button class="btn btn-secondary" onclick="exportarCSV()">↓ Exportar CSV</button><div style="height:8px"></div>';
-  el.innerHTML=html;
-}
-
-function renderConfig(){
-  const ev=state.evento;
-  document.getElementById('cfg-nome').textContent=ev?ev.nome:'Sem evento configurado';
-  let info=[];if(ev){if(ev.inst)info.push(ev.inst);if(ev.disc)info.push(ev.disc);if(ev.data)info.push(ev.data);}
-  document.getElementById('cfg-info').textContent=info.join(' · ');
-  if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
-  if(state.pin)document.getElementById('cfg-pin').value=state.pin;
-  const el=document.getElementById('lista-criterios-cfg');
-  if(!state.criterios.length){el.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum critério configurado.</div>';return;}
-  const eixos={};state.criterios.forEach(c=>{const k=c.eixo||'Sem eixo';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
-  let html='';
-  Object.entries(eixos).forEach(([eixo,crits])=>{
-    const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
-    html+='<div style="font-size:11px;color:var(--fg3);margin:10px 0 5px;font-weight:600">'+eixo+' — máx '+em.toFixed(1)+'</div>';
-    crits.forEach(c=>{html+='<div class="crit-item"><div class="crit-item-info"><div class="crit-item-name">'+c.nome+'</div><div class="crit-item-meta">'+(c.desc?c.desc+' · ':'')+'Máx: '+c.max+'</div></div><button class="crit-remove" onclick="removerCriterio(\''+c.id+'\')">🗑</button></div>';});
-  });
-  const tm=state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);
-  html+='<div style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600">Total máximo: '+tm.toFixed(1)+' pontos</div>';
-  el.innerHTML=html;
-}
-
-function saveAvaliador(){state.avaliador=document.getElementById('cfg-avaliador').value;save();}
-function savePIN(){state.pin=document.getElementById('cfg-pin').value;save();}
-function verificarPIN(){
-  const digitado=document.getElementById('pin-input').value;
-  if(digitado===state.pin){pinAutenticado=true;renderAvaliacao();}
-  else{const e=document.getElementById('pin-erro');if(e)e.style.display='block';const i=document.getElementById('pin-input');if(i){i.value='';i.focus();}}
-}
-function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save();renderConfig();}
-function confirmLimpar(){if(confirm('Apagar todas as avaliações?')){state.avaliacoes={};save();renderAll();}}
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-
-function openEventModal(){
-  if(state.evento){document.getElementById('ev-nome').value=state.evento.nome||'';document.getElementById('ev-inst').value=state.evento.inst||'';document.getElementById('ev-disc').value=state.evento.disc||'';document.getElementById('ev-data').value=state.evento.data||'';}
-  openModal('modal-evento');
-}
-function salvarEvento(){
-  const nome=document.getElementById('ev-nome').value.trim();
-  if(!nome){alert('Informe o nome do evento.');return;}
-  state.evento={nome,inst:document.getElementById('ev-inst').value.trim(),disc:document.getElementById('ev-disc').value.trim(),data:document.getElementById('ev-data').value};
-  save();renderAll();closeModal('modal-evento');
-}
-
-function openAddProjetoModal(adhoc){
-  document.getElementById('add-proj-title').textContent=adhoc?'Adicionar projeto (ad hoc)':'Adicionar projeto';
-  document.getElementById('adhoc-wrap').style.display=adhoc?'block':'none';
-  document.getElementById('proj-adhoc').checked=adhoc;
-  ['proj-grupo','proj-titulo','proj-integrantes','proj-desc'].forEach(id=>document.getElementById(id).value='');
-  openModal('modal-add-projeto');
-}
-function salvarProjeto(){
-  const titulo=document.getElementById('proj-titulo').value.trim();
-  if(!titulo){alert('Informe o título.');return;}
-  state.projetos.push({id:uid(),grupo:document.getElementById('proj-grupo').value.trim()||'—',titulo,integrantes:document.getElementById('proj-integrantes').value.trim(),desc:document.getElementById('proj-desc').value.trim(),adhoc:document.getElementById('proj-adhoc').checked});
-  save();renderProjetos();closeModal('modal-add-projeto');
-}
-
-function openCriterioModal(){['crit-eixo','crit-nome','crit-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('crit-max').value='1.5';openModal('modal-criterio');}
-function salvarCriterio(){
-  const nome=document.getElementById('crit-nome').value.trim();
-  if(!nome){alert('Informe o nome.');return;}
-  state.criterios.push({id:uid(),eixo:document.getElementById('crit-eixo').value.trim(),nome,desc:document.getElementById('crit-desc').value.trim(),max:parseFloat(document.getElementById('crit-max').value)});
-  save();renderConfig();closeModal('modal-criterio');
-}
-
-let qrStream=null,qrInterval=null;
-function abrirLeitorQR(){
-  openModal('modal-qr');
-  document.getElementById('qr-status').textContent='Iniciando câmera...';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
-    .then(function(stream){
-      qrStream=stream;var v=document.getElementById('qr-video');v.srcObject=stream;v.play();
-      document.getElementById('qr-status').textContent='Aponte para o QR Code';
-      qrInterval=setInterval(lerFrameQR,300);
-    })
-    .catch(function(err){document.getElementById('qr-status').textContent='Câmera não disponível: '+err.message;document.getElementById('qr-status').style.color='var(--red)';});
-}
-function lerFrameQR(){
-  var v=document.getElementById('qr-video'),c=document.getElementById('qr-canvas');
-  if(v.readyState!==v.HAVE_ENOUGH_DATA)return;
-  c.width=v.videoWidth;c.height=v.videoHeight;
-  var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
-  var img=ctx.getImageData(0,0,c.width,c.height);
-  var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});
-  if(code)processarQR(code.data);
-}
-function processarQR(texto){
-  fecharLeitorQR();var id=null;
-  try{var url=new URL(texto);id=url.searchParams.get('projeto');}catch(e){if(texto.startsWith('adhoc_')||texto.length<30)id=texto;}
-  if(!id){alert('QR Code não reconhecido.');return;}
-  var existe=state.projetos.find(function(p){return p.id===id;});
-  if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
-  buscarProjetoFirebase(id);
-}
-function buscarProjetoFirebase(id){
-  if(!fbReady||!db){alert('Sem conexão com Firebase.');return;}
-  db.ref('projetos/'+id).once('value',function(snap){
-    var p=snap.val();if(!p){alert('Projeto não encontrado.');return;}
-    state.projetos.push(p);save();renderProjetos();showSyncStatus('✅ Importado via QR');selecionarProjeto(id);
-  });
-}
-function fecharLeitorQR(){
-  if(qrInterval){clearInterval(qrInterval);qrInterval=null;}
-  if(qrStream){qrStream.getTracks().forEach(function(t){t.stop();});qrStream=null;}
-  var v=document.getElementById('qr-video');if(v)v.srcObject=null;
-  closeModal('modal-qr');
-}
-function verificarURLParams(){
-  var params=new URLSearchParams(window.location.search);var pid=params.get('projeto');if(!pid)return;
-  state._abriuViaQR=true;pinAutenticado=false;
-  var existe=state.projetos.find(function(p){return p.id===pid;});
-  if(existe){state.projetoAtivo=pid;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));showSyncStatus('✅ Projeto aberto via QR');}
-  else setTimeout(function(){buscarProjetoFirebase(pid);},1500);
-}
-
-let importRows=[],importCols=[];
-function importarExcel(input){
-  const file=input.files[0];if(!file)return;input.value='';
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
-      const data=XLSX.utils.sheet_to_json(ws,{defval:''});
-      if(!data.length){alert('Planilha vazia.');return;}
-      importRows=data;importCols=Object.keys(data[0]);renderImportModal();openModal('modal-import');
-    }catch(err){alert('Erro ao ler o arquivo.');}
-  };
-  reader.readAsArrayBuffer(file);
-}
-function guessCol(cols,hints){for(const h of hints){const f=cols.find(c=>c.toLowerCase().includes(h));if(f)return f;}return cols[0]||'';}
-function renderImportModal(){
-  const cG=guessCol(importCols,['grupo','num','n°','nº','id','#']);
-  const cT=guessCol(importCols,['titulo','título','nome','projeto','project']);
-  const cI=guessCol(importCols,['integr','aluno','membro','autor','equipe']);
-  const sel=s=>importCols.map(c=>'<option value="'+c+'"'+(c===s?' selected':'')+'>'+c+'</option>').join('');
-  document.getElementById('import-preview').innerHTML='<div style="font-size:13px;color:var(--fg2);margin-bottom:12px"><b>'+importRows.length+'</b> linha(s). Colunas: <span style="color:var(--fg3)">'+importCols.join(', ')+'</span></div>';
-  document.getElementById('import-map').innerHTML='<div class="field"><label class="label">Coluna → Grupo</label><select class="input" id="map-grupo">'+sel(cG)+'</select></div><div class="field"><label class="label">Coluna → Título</label><select class="input" id="map-titulo">'+sel(cT)+'</select></div><div class="field"><label class="label">Coluna → Integrantes</label><select class="input" id="map-integ">'+sel(cI)+'</select></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input type="checkbox" id="import-limpar" style="width:16px;height:16px;accent-color:var(--amber)"><label for="import-limpar" style="font-size:13px;color:var(--amber);cursor:pointer">Substituir lista atual</label></div>';
-}
-function confirmarImport(){
-  const cG=document.getElementById('map-grupo').value,cT=document.getElementById('map-titulo').value,cI=document.getElementById('map-integ').value;
-  const limpar=document.getElementById('import-limpar').checked;
-  const novos=importRows.filter(r=>r[cT]&&String(r[cT]).trim()).map(r=>({id:uid(),grupo:String(r[cG]||'—').trim(),titulo:String(r[cT]).trim(),integrantes:String(r[cI]||'').trim(),desc:'',adhoc:false}));
-  if(!novos.length){alert('Nenhum projeto válido.');return;}
-  if(limpar)state.projetos=novos;else state.projetos=[...state.projetos,...novos];
-  save();renderProjetos();closeModal('modal-import');showSyncStatus('✅ '+novos.length+' projeto(s) importado(s)');
-}
-
-document.querySelectorAll('.overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
-
-function exportarCSV(){
-  const cols=['grupo','titulo','integrantes','ad_hoc',...state.criterios.map(c=>c.nome),'total','obs'];
-  const rows=state.projetos.map(p=>{const av=state.avaliacoes[p.id]||{};return[p.grupo,p.titulo,p.integrantes,p.adhoc?'sim':'não',...state.criterios.map(c=>av[c.id]!==undefined?av[c.id]:''),nota(p.id).toFixed(1),av.obs||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',');});
-  const csv=[cols.map(c=>'"'+c+'"').join(','),...rows].join('\n');
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='avaliacoes.csv';a.click();URL.revokeObjectURL(url);
-}
-</script>
-</body>
-</html>
+function gerarValores(max){const s=Math.round(max/0.5)+1;const v=[];for(let
