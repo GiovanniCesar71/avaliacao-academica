@@ -112,21 +112,18 @@ textarea.input{resize:none;min-height:72px}
 </head>
 <body>
 
-<!-- TELA DE LOGIN -->
-<!-- TELA DE LOGIN -->
+<!-- [LOCAL 1] TELA DE LOGIN -->
 <div id="tela-login">
   <div style="width:100%;max-width:360px">
     <div class="login-logo">🎓</div>
     <div class="login-titulo">Avaliação Acadêmica</div>
     <div class="login-sub">Selecione seu perfil para acessar</div>
 
-    <!-- SELETOR DE PERFIL -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;background:var(--bg2);padding:4px;border-radius:var(--radius)">
       <button type="button" id="btn-modo-admin" class="btn btn-sm" style="background:var(--green);color:#0F1E0F" onclick="selecionarModoLogin('admin')">👑 Organizador</button>
       <button type="button" id="btn-modo-av" class="btn btn-sm" style="background:transparent;color:var(--fg2)" onclick="selecionarModoLogin('avaliador')">✏️ Avaliador</button>
     </div>
 
-    <!-- PAINEL LOGIN ADMIN -->
     <div id="painel-login-admin">
       <div class="field">
         <label class="label">Senha do Organizador</label>
@@ -141,7 +138,6 @@ textarea.input{resize:none;min-height:72px}
       </div>
     </div>
 
-    <!-- PAINEL LOGIN AVALIADOR -->
     <div id="painel-login-av" style="display:none">
       <div class="field">
         <label class="label">Usuário do Avaliador</label>
@@ -157,7 +153,6 @@ textarea.input{resize:none;min-height:72px}
       <div class="login-link" onclick="alert('Solicite ao Organizador do evento a redefinição da sua senha na aba Config > Avaliadores.')">Esqueci minha senha</div>
     </div>
 
-    <!-- PAINEL SETUP (PRIMEIRO ACESSO ADMIN) -->
     <div id="painel-setup" style="display:none">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">Configurar acesso do Organizador</div>
       <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Defina a senha e uma palavra/código de recuperação para emergências.</div>
@@ -170,7 +165,6 @@ textarea.input{resize:none;min-height:72px}
       <div class="login-link" onclick="selecionarModoLogin('admin')">← Voltar ao login</div>
     </div>
 
-    <!-- PAINEL RECUPERAR SENHA ADMIN -->
     <div id="painel-recuperar" style="display:none">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">Recuperar senha do Organizador</div>
       <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Informe a palavra/código de recuperação cadastrado no primeiro acesso.</div>
@@ -182,6 +176,76 @@ textarea.input{resize:none;min-height:72px}
       <button class="btn btn-primary" onclick="confirmarRecuperacaoAdmin()">Redefinir senha e entrar</button>
       <div class="login-link" onclick="selecionarModoLogin('admin')">← Voltar ao login</div>
     </div>
+  </div>
+</div>
+
+<!-- [LOCAL 2] ESTRUTURA PRINCIPAL DO APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-title" id="hdr-title">Avaliação Acadêmica</div>
+        <div class="header-sub" id="hdr-sub">Nenhum evento ativo</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="hdr-perfil" style="font-size:11px;color:var(--fg3)"></span>
+        <button class="btn-icon" onclick="fazerLogout()" title="Sair">🚪</button>
+        <button class="btn-icon" id="btn-cfg-header" onclick="openEventModal()" style="display:none">⚙️</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen active" id="screen-projetos">
+    <div class="sec-label">Projetos do evento</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="input" id="busca-input" placeholder="Buscar por nome ou grupo..." oninput="renderProjetos()">
+    </div>
+    <div id="lista-projetos"></div>
+    <div id="botoes-projetos" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button id="btn-add-proj" class="btn btn-secondary" onclick="openAddProjetoModal()">+ Adicionar</button>
+      <button id="btn-import-proj" class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
+      <button class="btn btn-secondary" style="grid-column:span 2;background:var(--bg3);border:1px solid rgba(124,201,106,.3);color:var(--green)" onclick="abrirLeitorQR()">📷 Ler QR Code do projeto</button>
+    </div>
+    <input type="file" id="xls-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importarExcel(this)">
+  </div>
+
+  <div class="screen" id="screen-avaliacao">
+    <div id="avaliacao-content"></div>
+  </div>
+
+  <div class="screen" id="screen-resumo">
+    <div id="resumo-content"></div>
+  </div>
+
+  <div class="screen" id="screen-config">
+    <div class="sec-label">Evento atual</div>
+    <div class="card">
+      <div class="card-title" id="cfg-nome">Sem evento configurado</div>
+      <div class="card-sub" id="cfg-info"></div>
+      <button class="btn btn-secondary" style="margin-top:12px;font-size:13px;padding:10px" onclick="openEventModal()">Editar evento</button>
+    </div>
+    <div class="sec-label">Critérios de avaliação</div>
+    <div id="lista-criterios-cfg"></div>
+    <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openCriterioModal()">+ Novo critério</button>
+    <div class="sec-label">Avaliadores cadastrados</div>
+    <div id="lista-avaliadores"></div>
+    <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openAvaliadorModal()">+ Novo avaliador</button>
+    <div class="sec-label">Senha do organizador</div>
+    <button class="btn btn-secondary btn-sm" onclick="openTrocarSenhaModal()">🔑 Alterar senha do organizador</button>
+    <div class="sec-label" style="margin-top:20px">Dados</div>
+    <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-danger btn-sm" onclick="confirmLimparProjetos()">🗑 Limpar todos os projetos</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-secondary btn-sm" onclick="resetApp()">🔄 Resetar app completo</button>
+  </div>
+
+  <div class="tabs" id="tabs-bar">
+    <button class="tab active" onclick="goTab('projetos',this)" data-tab="projetos"><span class="tab-icon">📋</span>Projetos</button>
+    <button class="tab" onclick="goTab('avaliacao',this)" data-tab="avaliacao"><span class="tab-icon">✏️</span>Avaliar</button>
+    <button class="tab" id="tab-resumo" onclick="goTab('resumo',this)" data-tab="resumo"><span class="tab-icon">📊</span>Resumo</button>
+    <button class="tab" id="tab-config" onclick="goTab('config',this)" data-tab="config"><span class="tab-icon">⚙️</span>Config</button>
   </div>
 </div>
 
@@ -234,7 +298,10 @@ textarea.input{resize:none;min-height:72px}
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border:3px solid var(--green);border-radius:8px;box-shadow:0 0 0 1000px rgba(0,0,0,.4)"></div>
       </div>
     </div>
-    <div style="margin-top:12px"><button class="btn btn-secondary" onclick="fecharLeitorQR()">Cancelar</button></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="fecharLeitorQR()">Cancelar</button>
+      <button class="btn btn-secondary" onclick="alternarCameraQR()">🔄 Trocar câmera</button>
+    </div>
   </div>
 </div>
 
@@ -249,6 +316,7 @@ textarea.input{resize:none;min-height:72px}
     <canvas id="foto-canvas" style="display:none"></canvas>
     <div style="margin-top:12px;display:flex;gap:8px">
       <button class="btn btn-secondary" onclick="fecharCamera()">Cancelar</button>
+      <button class="btn btn-secondary" onclick="alternarCameraFoto()">🔄 Trocar</button>
       <button class="btn btn-primary" onclick="capturarFoto()">📸 Capturar</button>
     </div>
   </div>
@@ -342,8 +410,7 @@ function escapeAttr(val){
   return String(val ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
-// ========== FIREBASE ==========
-// ========== FIREBASE ==========
+// [LOCAL 3] ========== FIREBASE ==========
 const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
 let db=null,fbReady=false,obsTimer=null;
 
@@ -370,7 +437,8 @@ async function initFirebase(){
         if(data.criterios!==undefined)state.criterios=Array.isArray(data.criterios)?data.criterios:[];
         if(data.avaliacoes!==undefined)state.avaliacoes=data.avaliacoes||{};
         if(data.avaliadores!==undefined)state.avaliadores=Array.isArray(data.avaliadores)?data.avaliadores:[];
-        if(data.adminSenha&&!state.adminSenha)state.adminSenha=data.adminSenha;
+        if(data.adminSenha)state.adminSenha=data.adminSenha;
+        if(data.adminRec)state.adminRec=data.adminRec;
         state.projetoAtivo=prev;
         saveLocal();
         renderHeader();
@@ -391,6 +459,7 @@ let state={
   avaliacoes:{},
   projetoAtivo:null,
   adminSenha:'',
+  adminRec:'',
   avaliadores:[]
 };
 let sessaoAtual=null;
@@ -414,6 +483,9 @@ function save(pathHint){
     db.ref('sessao/criterios').set(state.criterios).catch(e=>console.warn(e));
   }else if(pathHint==='avaliadores'){
     db.ref('sessao/avaliadores').set(state.avaliadores).catch(e=>console.warn(e));
+  }else if(pathHint==='authAdmin'){
+    db.ref('sessao/adminSenha').set(state.adminSenha||'').catch(e=>console.warn(e));
+    db.ref('sessao/adminRec').set(state.adminRec||'').catch(e=>console.warn(e));
   }else if(pathHint&&pathHint.pid&&pathHint.user){
     const entry=(state.avaliacoes[pathHint.pid]&&state.avaliacoes[pathHint.pid][pathHint.user])||null;
     db.ref('sessao/avaliacoes/'+pathHint.pid+'/'+pathHint.user).set(entry).catch(e=>console.warn(e));
@@ -424,50 +496,141 @@ function save(pathHint){
       criterios:state.criterios,
       avaliacoes:state.avaliacoes,
       avaliadores:state.avaliadores,
-      adminSenha:state.adminSenha||''
+      adminSenha:state.adminSenha||'',
+      adminRec:state.adminRec||''
     };
     db.ref('sessao').set(s).catch(e=>console.warn(e));
   }
   showSyncStatus('☁️ Salvo');
 }
-  
-// ========== LOGIN ==========
-function mostrarPainelLogin(){
-  document.getElementById('painel-login').style.display='block';
-  document.getElementById('painel-setup').style.display='none';
-  document.getElementById('link-setup').style.display=state.adminSenha?'none':'block';
+
+function load(){
+  try{
+    var d=localStorage.getItem('avaliacao_app');
+    if(d){var p=JSON.parse(d);if(p&&typeof p==='object'&&!Array.isArray(p))state={...state,...p};}
+  }catch(e){try{localStorage.clear();}catch(e2){}}
+  try{
+    var s=localStorage.getItem('avaliacao_sessao');
+    if(s)sessaoAtual=JSON.parse(s);
+  }catch(e){}
 }
+
+// [LOCAL 4] ========== AUTENTICAÇÃO, SINCRONIZAÇÃO PRÉ-LOGIN E RECUPERAÇÃO ==========
+function syncAuthRemoto(){
+  if(typeof firebase==='undefined')return Promise.resolve();
+  try{
+    if(!firebase.apps.length)firebase.initializeApp({databaseURL:FB_URL});
+    return firebase.database().ref('sessao').once('value').then(snap=>{
+      const data=snap.val();
+      if(!data)return;
+      if(Array.isArray(data.avaliadores)){state.avaliadores=data.avaliadores;}
+      if(data.adminSenha){state.adminSenha=data.adminSenha;}
+      if(data.adminRec){state.adminRec=data.adminRec;}
+      saveLocal();
+      atualizarBotoesAuthAdmin();
+    }).catch(()=>{});
+  }catch(e){return Promise.resolve();}
+}
+
+function atualizarBotoesAuthAdmin(){
+  const temSenha=Boolean(state.adminSenha);
+  const linkSetup=document.getElementById('link-setup');
+  const linkRec=document.getElementById('link-recuperar-admin');
+  if(linkSetup)linkSetup.style.display=temSenha?'none':'inline-block';
+  if(linkRec)linkRec.style.display=temSenha?'inline-block':'none';
+}
+
+function selecionarModoLogin(modo){
+  const isAdmin=modo==='admin';
+  document.getElementById('btn-modo-admin').style.background=isAdmin?'var(--green)':'transparent';
+  document.getElementById('btn-modo-admin').style.color=isAdmin?'#0F1E0F':'var(--fg2)';
+  document.getElementById('btn-modo-av').style.background=!isAdmin?'var(--green)':'transparent';
+  document.getElementById('btn-modo-av').style.color=!isAdmin?'#0F1E0F':'var(--fg2)';
+
+  document.getElementById('painel-setup').style.display='none';
+  document.getElementById('painel-recuperar').style.display='none';
+  document.getElementById('painel-login-admin').style.display=isAdmin?'block':'none';
+  document.getElementById('painel-login-av').style.display=!isAdmin?'block':'none';
+
+  document.getElementById('login-erro-admin').textContent='';
+  document.getElementById('login-erro-av').textContent='';
+  atualizarBotoesAuthAdmin();
+
+  if(isAdmin&&!state.adminSenha){
+    mostrarPainelSetup();
+  }
+}
+
 function mostrarPainelSetup(){
-  document.getElementById('painel-login').style.display='none';
+  ['painel-login-admin','painel-login-av','painel-recuperar'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('painel-setup').style.display='block';
-  ['setup-senha','setup-senha2'].forEach(id=>document.getElementById(id).value='');
+  ['setup-senha','setup-senha2','setup-rec'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('setup-erro').textContent='';
+}
+
+function mostrarPainelRecuperar(){
+  ['painel-login-admin','painel-login-av','painel-setup'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('painel-recuperar').style.display='block';
+  ['rec-codigo','rec-nova','rec-nova2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rec-erro').textContent='';
 }
 
 function confirmarSetup(){
   const s1=document.getElementById('setup-senha').value;
   const s2=document.getElementById('setup-senha2').value;
+  const rec=document.getElementById('setup-rec').value.trim();
   const err=document.getElementById('setup-erro');
-  if(!s1){err.textContent='Digite uma senha.';return;}
-  if(s1.length<4){err.textContent='Senha muito curta (mínimo 4 caracteres).';return;}
+  if(!s1||s1.length<4){err.textContent='A senha deve ter no mínimo 4 caracteres.';return;}
   if(s1!==s2){err.textContent='As senhas não coincidem.';return;}
+  if(!rec||rec.length<3){err.textContent='Informe um código de recuperação (mín. 3 caracteres).';return;}
   state.adminSenha=s1;
-  saveLocal();
+  state.adminRec=rec;
+  save('authAdmin');
   entrarComoAdmin();
 }
 
-function fazerLogin(){
+function confirmarRecuperacaoAdmin(){
+  const cod=document.getElementById('rec-codigo').value.trim();
+  const n1=document.getElementById('rec-nova').value;
+  const n2=document.getElementById('rec-nova2').value;
+  const err=document.getElementById('rec-erro');
+  if(!state.adminRec){err.textContent='Nenhuma palavra de recuperação foi cadastrada neste evento.';return;}
+  if(cod.toLowerCase()!==String(state.adminRec).trim().toLowerCase()){err.textContent='Código de recuperação incorreto.';return;}
+  if(!n1||n1.length<4){err.textContent='A nova senha deve ter no mínimo 4 caracteres.';return;}
+  if(n1!==n2){err.textContent='As senhas não coincidem.';return;}
+  state.adminSenha=n1;
+  save('authAdmin');
+  entrarComoAdmin();
+}
+
+async function fazerLoginAdmin(){
+  const pass=document.getElementById('login-admin-pass').value;
+  const err=document.getElementById('login-erro-admin');
+  err.textContent='';
+  if(!pass){err.textContent='Digite a senha do organizador.';return;}
+  if(!state.adminSenha){await syncAuthRemoto();}
+  if(!state.adminSenha){mostrarPainelSetup();return;}
+  if(pass===state.adminSenha){
+    entrarComoAdmin();
+    return;
+  }
+  err.textContent='Senha do organizador incorreta.';
+  document.getElementById('login-admin-pass').value='';
+}
+
+async function fazerLoginAvaliador(){
   const user=document.getElementById('login-user').value.trim().toLowerCase();
-  const pass=document.getElementById('login-pass').value;
-  const err=document.getElementById('login-erro');
+  const pass=document.getElementById('login-pass').value.trim();
+  const err=document.getElementById('login-erro-av');
   err.textContent='';
   if(!user||!pass){err.textContent='Preencha usuário e senha.';return;}
-  if(user==='admin'&&state.adminSenha&&pass===state.adminSenha){entrarComoAdmin();return;}
+  if(!state.avaliadores.length){await syncAuthRemoto();}
   const av=state.avaliadores.find(a=>a.user.toLowerCase()===user&&a.pass===pass);
   if(av){
     sessaoAtual={user:av.user,perfil:'avaliador',nome:av.nome};
     localStorage.setItem('avaliacao_sessao',JSON.stringify(sessaoAtual));
-    abrirApp();return;
+    abrirApp();
+    return;
   }
   err.textContent='Usuário ou senha incorretos.';
   document.getElementById('login-pass').value='';
@@ -494,10 +657,10 @@ function fazerLogout(){
   if(db){try{db.ref('sessao').off();}catch(e){}}
   fbReady=false;db=null;
   document.getElementById('tela-login').classList.remove('oculta');
+  document.getElementById('login-admin-pass').value='';
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
-  document.getElementById('login-erro').textContent='';
-  mostrarPainelLogin();
+  syncAuthRemoto().then(()=>selecionarModoLogin('admin'));
 }
 
 function aplicarPermissoes(){
@@ -528,9 +691,9 @@ if(!state.criterios||!state.criterios.length){
   ];
 }
 if(sessaoAtual){abrirApp();}
-else{mostrarPainelLogin();}
+else{syncAuthRemoto().then(()=>selecionarModoLogin('admin'));}
 
-// ========== AVALIADORES ==========
+// [LOCAL 5] ========== AVALIADORES ==========
 function openAvaliadorModal(){
   ['av-nome','av-user','av-pass'].forEach(id=>document.getElementById(id).value='');
   openModal('modal-avaliador');
@@ -538,19 +701,31 @@ function openAvaliadorModal(){
 function salvarAvaliador(){
   const nome=document.getElementById('av-nome').value.trim();
   const user=document.getElementById('av-user').value.trim().toLowerCase();
-  const pass=document.getElementById('av-pass').value;
+  const pass=document.getElementById('av-pass').value.trim();
   if(!nome||!user||!pass){alert('Preencha todos os campos.');return;}
   if(user==='admin'){alert('Usuário "admin" é reservado.');return;}
-  if(state.avaliadores.find(a=>a.user===user)){alert('Usuário já cadastrado.');return;}
-  if(state.avaliadores.length>=3){alert('Máximo de 3 avaliadores atingido.');return;}
+  if(state.avaliadores.find(a=>a.user.toLowerCase()===user)){alert('Usuário já cadastrado.');return;}
   state.avaliadores.push({id:uid(),nome,user,pass});
-  saveLocal();renderConfig();closeModal('modal-avaliador');
-  showSyncStatus('✅ Avaliador cadastrado');
+  save('avaliadores');
+  renderConfig();
+  closeModal('modal-avaliador');
+  showSyncStatus('✅ Avaliador cadastrado e sincronizado');
+}
+function redefinirSenhaAvaliador(id){
+  const av=state.avaliadores.find(a=>a.id===id);
+  if(!av)return;
+  const nova=prompt('Nova senha para '+av.nome+' (@'+av.user+'):');
+  if(nova===null)return;
+  if(nova.trim().length<3){alert('A senha deve ter pelo menos 3 caracteres.');return;}
+  av.pass=nova.trim();
+  save('avaliadores');
+  showSyncStatus('🔑 Senha de '+av.nome+' atualizada');
 }
 function removerAvaliador(id){
   if(!confirm('Remover este avaliador?'))return;
   state.avaliadores=state.avaliadores.filter(a=>a.id!==id);
-  saveLocal();renderConfig();
+  save('avaliadores');
+  renderConfig();
 }
 function openTrocarSenhaModal(){
   ['ts-atual','ts-nova','ts-nova2'].forEach(id=>document.getElementById(id).value='');
@@ -565,7 +740,9 @@ function trocarSenhaAdmin(){
   if(atual!==state.adminSenha){err.textContent='Senha atual incorreta.';return;}
   if(!nova||nova.length<4){err.textContent='Nova senha muito curta.';return;}
   if(nova!==nova2){err.textContent='As senhas não coincidem.';return;}
-  state.adminSenha=nova;saveLocal();closeModal('modal-trocar-senha');
+  state.adminSenha=nova;
+  save('authAdmin');
+  closeModal('modal-trocar-senha');
   showSyncStatus('✅ Senha alterada');
 }
 function resetApp(){
@@ -815,7 +992,7 @@ function renderConfig(){
   const ela=document.getElementById('lista-avaliadores');
   if(!state.avaliadores.length){ela.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum avaliador cadastrado.</div>';}
   else{
-    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-row"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+escapeHtml(a.nome)+'</div><div style="font-size:11px;color:var(--fg3)">@'+escapeHtml(a.user)+'</div></div><button class="crit-remove" onclick="removerAvaliador(\''+escapeAttr(a.id)+'\')">🗑</button></div>').join('');
+    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-row"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+escapeHtml(a.nome)+'</div><div style="font-size:11px;color:var(--fg3)">@'+escapeHtml(a.user)+'</div></div><button class="crit-remove" title="Redefinir senha" onclick="redefinirSenhaAvaliador(\''+escapeAttr(a.id)+'\')">🔑</button><button class="crit-remove" title="Remover" onclick="removerAvaliador(\''+escapeAttr(a.id)+'\')">🗑</button></div>').join('');
   }
 }
 
@@ -863,7 +1040,6 @@ let qrStream = null, qrInterval = null, qrFacing = 'environment';
 let fotoStream = null, fotoProjetoId = null, fotoFacing = 'environment';
 
 async function obterStreamCamera(facingMode, idealW = 1280, idealH = 720) {
-  // 1. Tenta facingMode exato sem resolução travada
   try {
     return await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { exact: facingMode } },
@@ -871,7 +1047,6 @@ async function obterStreamCamera(facingMode, idealW = 1280, idealH = 720) {
     });
   } catch (e1) {}
 
-  // 2. Tenta facingMode ideal com resolução moderada
   try {
     return await navigator.mediaDevices.getUserMedia({
       video: { facingMode: facingMode, width: { ideal: idealW }, height: { ideal: idealH } },
@@ -879,7 +1054,6 @@ async function obterStreamCamera(facingMode, idealW = 1280, idealH = 720) {
     });
   } catch (e2) {}
 
-  // 3. Varre dispositivos disponíveis (após permissão, labels vêm preenchidos)
   const devices = await navigator.mediaDevices.enumerateDevices();
   const cams = devices.filter(d => d.kind === 'videoinput');
   if (!cams.length) throw new Error('Nenhuma câmera encontrada.');
@@ -1044,6 +1218,14 @@ function pararStreamFoto() {
 function fecharCamera() {
   pararStreamFoto();
   closeModal('modal-foto');
+}
+
+function verFoto(idx,pid){
+  var user=sessaoAtual?sessaoAtual.user:'admin';
+  var fotos=(state.avaliacoes[pid]&&state.avaliacoes[pid][user]&&state.avaliacoes[pid][user]._fotos)||[];
+  if(!fotos[idx])return;
+  document.getElementById('ver-foto-img').src=fotos[idx];
+  openModal('modal-ver-foto');
 }
 
 // ========== URL PARAMS ==========
