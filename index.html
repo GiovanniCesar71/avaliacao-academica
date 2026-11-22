@@ -878,110 +878,192 @@ function salvarCriterio(){
   save('criterios');renderConfig();closeModal('modal-criterio');
 }
 
-// ========== CÂMERA QR ==========
-let qrStream=null,qrInterval=null;
-function abrirLeitorQR(){
-  openModal('modal-qr');
-  document.getElementById('qr-status').textContent='Iniciando câmera...';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
-    .then(function(stream){
-      qrStream=stream;var v=document.getElementById('qr-video');
-      v.srcObject=stream;
-      v.onloadedmetadata=function(){
-        v.play().then(function(){
-          document.getElementById('qr-status').textContent='Aponte para o QR Code';
-          qrInterval=setInterval(lerFrameQR,300);
-        }).catch(function(err){
-          document.getElementById('qr-status').textContent='Erro: '+err.message;
-        });
-      };
-    }).catch(function(err){document.getElementById('qr-status').textContent='Câmera indisponível: '+err.message;});
-}
-function lerFrameQR(){
-  var v=document.getElementById('qr-video'),c=document.getElementById('qr-canvas');
-  if(v.readyState!==v.HAVE_ENOUGH_DATA)return;
-  c.width=v.videoWidth;c.height=v.videoHeight;
-  var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
-  var img=ctx.getImageData(0,0,c.width,c.height);
-  var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});
-  if(code)processarQR(code.data);
-}
-function processarQR(texto){
-  fecharLeitorQR();
-  var id=null;
-  try{var url=new URL(texto);id=url.searchParams.get('projeto');}
-  catch(e){if(texto&&texto.length<30)id=texto.trim();}
-  if(!id){alert('QR Code não reconhecido.');return;}
-  var existe=state.projetos.find(function(p){return p.id===id;});
-  if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
-  buscarProjetoFirebase(id);
-}
-function buscarProjetoFirebase(id){
-  if(!fbReady||!db){alert('Sem conexão com Firebase para buscar projeto.');return;}
-  showSyncStatus('🔄 Buscando...');
-  db.ref('sessao/projetos').once('value',function(snap){
-    var projetos=snap.val();
-    if(!projetos||!Array.isArray(projetos)){alert('Projeto não encontrado.');return;}
-    var p=projetos.find(function(x){return x.id===id;});
-    if(!p){alert('Projeto não encontrado. ID: '+id);return;}
-    if(!state.projetos.find(function(x){return x.id===id;})){state.projetos.push(p);save('projetos');}
-    renderProjetos();selecionarProjeto(id);showSyncStatus('✅ Importado via QR');
+// ========== CÂMERA (QR E FOTO - TRASEIRA COM FALLBACK E TROCA) ==========
+let qrStream = null, qrInterval = null, qrFacing = 'environment';
+let fotoStream = null, fotoProjetoId = null, fotoFacing = 'environment';
+
+async function obterStreamCamera(facingMode, idealW = 1280, idealH = 720) {
+  // 1. Tenta facingMode exato sem resolução travada
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { exact: facingMode } },
+      audio: false
+    });
+  } catch (e1) {}
+
+  // 2. Tenta facingMode ideal com resolução moderada
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode, width: { ideal: idealW }, height: { ideal: idealH } },
+      audio: false
+    });
+  } catch (e2) {}
+
+  // 3. Varre dispositivos disponíveis (após permissão, labels vêm preenchidos)
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cams = devices.filter(d => d.kind === 'videoinput');
+  if (!cams.length) throw new Error('Nenhuma câmera encontrada.');
+
+  const hintsTraseira = ['back', 'rear', 'traseira', 'environment', '0'];
+  const hintsFrente = ['front', 'user', 'frontal', 'selfie'];
+
+  let escolhida = null;
+  if (facingMode === 'environment') {
+    escolhida = cams.find(c => hintsTraseira.some(h => (c.label || '').toLowerCase().includes(h)))
+             || cams.find(c => !hintsFrente.some(h => (c.label || '').toLowerCase().includes(h)))
+             || cams[cams.length - 1];
+  } else {
+    escolhida = cams.find(c => hintsFrente.some(h => (c.label || '').toLowerCase().includes(h)))
+             || cams[0];
+  }
+
+  return await navigator.mediaDevices.getUserMedia({
+    video: { deviceId: escolhida.deviceId ? { exact: escolhida.deviceId } : undefined },
+    audio: false
   });
 }
-function fecharLeitorQR(){
-  if(qrInterval){clearInterval(qrInterval);qrInterval=null;}
-  if(qrStream){qrStream.getTracks().forEach(function(t){t.stop();});qrStream=null;}
-  var v=document.getElementById('qr-video');if(v)v.srcObject=null;
+
+function abrirLeitorQR() {
+  qrFacing = 'environment';
+  openModal('modal-qr');
+  iniciarVideoQR();
+}
+
+function alternarCameraQR() {
+  qrFacing = (qrFacing === 'environment') ? 'user' : 'environment';
+  pararStreamQR();
+  iniciarVideoQR();
+}
+
+function iniciarVideoQR() {
+  document.getElementById('qr-status').textContent = 'Iniciando câmera...';
+  obterStreamCamera(qrFacing, 1280, 720)
+    .then(function(stream) {
+      qrStream = stream;
+      var v = document.getElementById('qr-video');
+      v.srcObject = stream;
+      v.onloadedmetadata = function() {
+        v.play().then(function() {
+          document.getElementById('qr-status').textContent =
+            (qrFacing === 'environment' ? 'Câmera traseira' : 'Câmera frontal') + ' — aponte para o QR Code';
+          if (qrInterval) clearInterval(qrInterval);
+          qrInterval = setInterval(lerFrameQR, 300);
+        }).catch(function(err) {
+          document.getElementById('qr-status').textContent = 'Erro: ' + err.message;
+        });
+      };
+    }).catch(function(err) {
+      document.getElementById('qr-status').textContent = 'Câmera indisponível: ' + err.message;
+    });
+}
+
+function lerFrameQR() {
+  var v = document.getElementById('qr-video'), c = document.getElementById('qr-canvas');
+  if (v.readyState !== v.HAVE_ENOUGH_DATA) return;
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  var ctx = c.getContext('2d'); ctx.drawImage(v, 0, 0, c.width, c.height);
+  var img = ctx.getImageData(0, 0, c.width, c.height);
+  var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+  if (code) processarQR(code.data);
+}
+
+function processarQR(texto) {
+  fecharLeitorQR();
+  var id = null;
+  try { var url = new URL(texto); id = url.searchParams.get('projeto'); }
+  catch (e) { if (texto && texto.length < 30) id = texto.trim(); }
+  if (!id) { alert('QR Code não reconhecido.'); return; }
+  var existe = state.projetos.find(function(p) { return p.id === id; });
+  if (existe) { selecionarProjeto(id); showSyncStatus('✅ Projeto selecionado via QR'); return; }
+  buscarProjetoFirebase(id);
+}
+
+function buscarProjetoFirebase(id) {
+  if (!fbReady || !db) { alert('Sem conexão com Firebase para buscar projeto.'); return; }
+  showSyncStatus('🔄 Buscando...');
+  db.ref('sessao/projetos').once('value', function(snap) {
+    var projetos = snap.val();
+    if (!projetos || !Array.isArray(projetos)) { alert('Projeto não encontrado.'); return; }
+    var p = projetos.find(function(x) { return x.id === id; });
+    if (!p) { alert('Projeto não encontrado. ID: ' + id); return; }
+    if (!state.projetos.find(function(x) { return x.id === id; })) { state.projetos.push(p); save('projetos'); }
+    renderProjetos(); selecionarProjeto(id); showSyncStatus('✅ Importado via QR');
+  });
+}
+
+function pararStreamQR() {
+  if (qrInterval) { clearInterval(qrInterval); qrInterval = null; }
+  if (qrStream) { qrStream.getTracks().forEach(function(t) { t.stop(); }); qrStream = null; }
+  var v = document.getElementById('qr-video'); if (v) v.srcObject = null;
+}
+
+function fecharLeitorQR() {
+  pararStreamQR();
   closeModal('modal-qr');
 }
 
-// ========== CÂMERA FOTO ==========
-let fotoProjetoId=null;
-function abrirCameraFoto(pid){
-  fotoProjetoId=pid;
+function abrirCameraFoto(pid) {
+  fotoProjetoId = pid;
+  fotoFacing = 'environment';
   openModal('modal-foto');
-  document.getElementById('foto-status').textContent='Posicione o projeto e toque em Capturar';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
-    .then(function(stream){
-      fotoStream=stream;var v=document.getElementById('foto-video');
-      v.srcObject=stream;
-      v.onloadedmetadata=function(){v.play();};
-    }).catch(function(err){document.getElementById('foto-status').textContent='Câmera indisponível: '+err.message;});
+  iniciarVideoFoto();
 }
-function capturarFoto(){
-  var v=document.getElementById('foto-video'),c=document.getElementById('foto-canvas');
-  if(!fotoStream||v.readyState!==v.HAVE_ENOUGH_DATA){alert('Câmera ainda não pronta.');return;}
-  const maxW=900;
-  const scale=v.videoWidth>maxW?maxW/v.videoWidth:1;
-  c.width=Math.round(v.videoWidth*scale);
-  c.height=Math.round(v.videoHeight*scale);
-  var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
-  var dataUrl=c.toDataURL('image/jpeg',0.72);
-  var user=sessaoAtual?sessaoAtual.user:'admin';
-  if(!state.avaliacoes[fotoProjetoId])state.avaliacoes[fotoProjetoId]={};
-  if(!state.avaliacoes[fotoProjetoId][user])state.avaliacoes[fotoProjetoId][user]={};
-  if(!Array.isArray(state.avaliacoes[fotoProjetoId][user]._fotos))state.avaliacoes[fotoProjetoId][user]._fotos=[];
+
+function alternarCameraFoto() {
+  fotoFacing = (fotoFacing === 'environment') ? 'user' : 'environment';
+  pararStreamFoto();
+  iniciarVideoFoto();
+}
+
+function iniciarVideoFoto() {
+  document.getElementById('foto-status').textContent = 'Iniciando câmera...';
+  obterStreamCamera(fotoFacing, 1280, 720)
+    .then(function(stream) {
+      fotoStream = stream;
+      var v = document.getElementById('foto-video');
+      v.srcObject = stream;
+      v.onloadedmetadata = function() {
+        v.play().catch(function(){});
+        document.getElementById('foto-status').textContent =
+          (fotoFacing === 'environment' ? 'Câmera traseira' : 'Câmera frontal') + ' — posicione o projeto';
+      };
+    }).catch(function(err) {
+      document.getElementById('foto-status').textContent = 'Câmera indisponível: ' + err.message;
+    });
+}
+
+function capturarFoto() {
+  var v = document.getElementById('foto-video'), c = document.getElementById('foto-canvas');
+  if (!fotoStream || v.readyState !== v.HAVE_ENOUGH_DATA) { alert('Câmera ainda não pronta.'); return; }
+  const maxW = 900;
+  const scale = v.videoWidth > maxW ? maxW / v.videoWidth : 1;
+  c.width = Math.round(v.videoWidth * scale);
+  c.height = Math.round(v.videoHeight * scale);
+  var ctx = c.getContext('2d'); ctx.drawImage(v, 0, 0, c.width, c.height);
+  var dataUrl = c.toDataURL('image/jpeg', 0.72);
+  var user = sessaoAtual ? sessaoAtual.user : 'admin';
+  if (!state.avaliacoes[fotoProjetoId]) state.avaliacoes[fotoProjetoId] = {};
+  if (!state.avaliacoes[fotoProjetoId][user]) state.avaliacoes[fotoProjetoId][user] = {};
+  if (!Array.isArray(state.avaliacoes[fotoProjetoId][user]._fotos)) state.avaliacoes[fotoProjetoId][user]._fotos = [];
   state.avaliacoes[fotoProjetoId][user]._fotos.push(dataUrl);
-  save({pid:fotoProjetoId,user});
-  var a=document.createElement('a');
-  var p=state.projetos.find(function(x){return x.id===fotoProjetoId;});
-  a.download='foto_projeto_'+(p?p.grupo:'')+'_'+Date.now()+'.jpg';
-  a.href=dataUrl;a.click();
+  save({ pid: fotoProjetoId, user });
+  var a = document.createElement('a');
+  var p = state.projetos.find(function(x) { return x.id === fotoProjetoId; });
+  a.download = 'foto_projeto_' + (p ? p.grupo : '') + '_' + Date.now() + '.jpg';
+  a.href = dataUrl; a.click();
   fecharCamera();
   showSyncStatus('📸 Foto salva e baixada');
-  if(state.projetoAtivo===fotoProjetoId)renderAvaliacao();
+  if (state.projetoAtivo === fotoProjetoId) renderAvaliacao();
 }
-function fecharCamera(){
-  if(fotoStream){fotoStream.getTracks().forEach(function(t){t.stop();});fotoStream=null;}
-  var v=document.getElementById('foto-video');if(v)v.srcObject=null;
+
+function pararStreamFoto() {
+  if (fotoStream) { fotoStream.getTracks().forEach(function(t) { t.stop(); }); fotoStream = null; }
+  var v = document.getElementById('foto-video'); if (v) v.srcObject = null;
+}
+
+function fecharCamera() {
+  pararStreamFoto();
   closeModal('modal-foto');
-}
-function verFoto(idx,pid){
-  var user=sessaoAtual?sessaoAtual.user:'admin';
-  var fotos=(state.avaliacoes[pid]&&state.avaliacoes[pid][user]&&state.avaliacoes[pid][user]._fotos)||[];
-  if(!fotos[idx])return;
-  document.getElementById('ver-foto-img').src=fotos[idx];
-  openModal('modal-ver-foto');
 }
 
 // ========== URL PARAMS ==========
