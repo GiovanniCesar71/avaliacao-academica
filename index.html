@@ -307,7 +307,6 @@ function resetApp(){
     if(fbReady&&db){db.ref('sessao').remove();}
     state={evento:null,avaliador:'',pin:'',projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null};
     pinAutenticado=false;
-    // Recarrega critérios padrão
     state.criterios=[
       {id:'c1',eixo:'Apresentação',nome:'Explanação Oral e Didática',desc:'Clareza, postura, gestão do tempo',max:1.0},
       {id:'c2',eixo:'Apresentação',nome:'Conhecimento Técnico',desc:'Domínio sobre o assunto apresentado',max:1.5},
@@ -322,7 +321,6 @@ function resetApp(){
   }
 }
 
-// Reset via ?reset=1 na URL
 (function(){
   var p=new URLSearchParams(window.location.search);
   if(p.get('reset')==='1'){
@@ -389,7 +387,11 @@ function renderProjetos(){
   }).join('');
 }
 
-function selecionarProjeto(pid){state.projetoAtivo=pid;if(!state._abriuViaQR)pinAutenticado=true;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));}
+function selecionarProjeto(pid){
+  state.projetoAtivo=pid;
+  if(!state._abriuViaQR)pinAutenticado=true;
+  goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));
+}
 
 function renderAvaliacao(){
   const el=document.getElementById('avaliacao-content');
@@ -550,18 +552,34 @@ function lerFrameQR(){
   if(code)processarQR(code.data);
 }
 function processarQR(texto){
-  fecharLeitorQR();var id=null;
-  try{var url=new URL(texto);id=url.searchParams.get('projeto');}catch(e){if(texto.startsWith('adhoc_')||texto.length<30)id=texto;}
-  if(!id){alert('QR Code não reconhecido.');return;}
+  fecharLeitorQR();
+  var id=null;
+  try{var url=new URL(texto);id=url.searchParams.get('projeto');}
+  catch(e){if(texto.startsWith('adhoc_')||texto.length<30)id=texto;}
+  if(!id){alert('QR Code não reconhecido: '+texto);return;}
   var existe=state.projetos.find(function(p){return p.id===id;});
-  if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
+  if(existe){
+    state._abriuViaQR=true;
+    pinAutenticado=false;
+    selecionarProjeto(id);
+    showSyncStatus('✅ Projeto selecionado via QR');
+    return;
+  }
   buscarProjetoFirebase(id);
 }
 function buscarProjetoFirebase(id){
-  if(!fbReady||!db){alert('Sem conexão com Firebase.');return;}
+  if(!fbReady||!db){alert('Sem conexão com Firebase. Verifique a internet.');return;}
+  showSyncStatus('🔄 Buscando projeto...');
   db.ref('projetos/'+id).once('value',function(snap){
-    var p=snap.val();if(!p){alert('Projeto não encontrado.');return;}
-    state.projetos.push(p);save();renderProjetos();showSyncStatus('✅ Importado via QR');selecionarProjeto(id);
+    var p=snap.val();
+    if(!p){alert('Projeto não encontrado no Firebase. ID: '+id);return;}
+    state.projetos.push(p);
+    save();
+    renderProjetos();
+    showSyncStatus('✅ Importado via QR');
+    state._abriuViaQR=true;
+    pinAutenticado=false;
+    selecionarProjeto(id);
   });
 }
 function fecharLeitorQR(){
