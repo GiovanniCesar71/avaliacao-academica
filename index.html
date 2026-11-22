@@ -101,7 +101,7 @@ textarea.input{resize:none;min-height:72px}
 .login-link{color:var(--amber);font-size:13px;text-align:center;cursor:pointer;margin-top:12px;text-decoration:underline}
 /* FOTOS */
 .fotos-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.foto-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,255,255,.1)}
+.foto-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,255,255,.1);cursor:pointer}
 /* RESUMO TABLE */
 .resumo-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
 .resumo-table th{background:var(--bg3);color:var(--fg2);padding:8px 6px;text-align:left;font-weight:600;border-bottom:1px solid rgba(255,255,255,.08)}
@@ -114,7 +114,6 @@ textarea.input{resize:none;min-height:72px}
 
 <!-- TELA DE LOGIN -->
 <div id="tela-login">
-  <!-- Painel Login normal -->
   <div id="painel-login" style="width:100%;max-width:360px">
     <div class="login-logo">🎓</div>
     <div class="login-titulo">Avaliação Acadêmica</div>
@@ -126,7 +125,6 @@ textarea.input{resize:none;min-height:72px}
     <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
     <div id="link-setup" class="login-link" style="display:none" onclick="mostrarPainelSetup()">Primeiro acesso — configurar senha do organizador</div>
   </div>
-  <!-- Painel Setup (criar senha admin) -->
   <div id="painel-setup" style="width:100%;max-width:360px;display:none">
     <div class="login-logo">🔑</div>
     <div class="login-titulo">Criar senha do organizador</div>
@@ -163,7 +161,7 @@ textarea.input{resize:none;min-height:72px}
     </div>
     <div id="lista-projetos"></div>
     <div id="botoes-projetos" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <button id="btn-add-proj" class="btn btn-secondary" onclick="openAddProjetoModal(false)">+ Adicionar</button>
+      <button id="btn-add-proj" class="btn btn-secondary" onclick="openAddProjetoModal()">+ Adicionar</button>
       <button id="btn-import-proj" class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
       <button class="btn btn-secondary" style="grid-column:span 2;background:var(--bg3);border:1px solid rgba(124,201,106,.3);color:var(--green)" onclick="abrirLeitorQR()">📷 Ler QR Code do projeto</button>
     </div>
@@ -278,6 +276,17 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
+<div class="overlay" id="modal-ver-foto">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Visualizar foto</div>
+    <img id="ver-foto-img" src="" alt="Foto do projeto" style="width:100%;max-height:60vh;object-fit:contain;border-radius:8px;background:#000">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ver-foto')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-import">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -342,9 +351,22 @@ textarea.input{resize:none;min-height:72px}
 </div>
 
 <script>
+// ========== UTILITÁRIOS DE SEGURANÇA ==========
+function escapeHtml(val){
+  return String(val ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+function escapeAttr(val){
+  return String(val ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
 // ========== FIREBASE ==========
 const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
-let db=null,fbReady=false;
+let db=null,fbReady=false,obsTimer=null;
 
 function showSyncStatus(msg){
   let el=document.getElementById('sync-status');
@@ -364,13 +386,15 @@ async function initFirebase(){
       const data=snap.val();
       if(data){
         const prev=state.projetoAtivo;
-        // Mescla apenas dados públicos (não auth)
         if(data.evento!==undefined)state.evento=data.evento;
-        if(data.projetos!==undefined)state.projetos=data.projetos;
-        if(data.criterios!==undefined)state.criterios=data.criterios;
-        if(data.avaliacoes!==undefined)state.avaliacoes=data.avaliacoes;
+        if(data.projetos!==undefined)state.projetos=Array.isArray(data.projetos)?data.projetos:[];
+        if(data.criterios!==undefined)state.criterios=Array.isArray(data.criterios)?data.criterios:[];
+        if(data.avaliacoes!==undefined)state.avaliacoes=data.avaliacoes||{};
         state.projetoAtivo=prev;
-        renderAll();
+        saveLocal();
+        renderHeader();
+        renderProjetos();
+        aplicarPermissoes();
       }
     });
     showSyncStatus('🟢 Conectado');
@@ -382,29 +406,40 @@ let state={
   evento:null,
   projetos:[],
   criterios:[],
-  // avaliacoes[projetoId][usuarioAvaliador][criterioId] = valor
-  // avaliacoes[projetoId][usuarioAvaliador].obs = texto
   avaliacoes:{},
   projetoAtivo:null,
   adminSenha:'',
   avaliadores:[]
 };
-let sessaoAtual=null; // {user, perfil:'admin'|'avaliador', nome}
+let sessaoAtual=null;
 let fotoStream=null;
 
-function uid(){return Math.random().toString(36).slice(2,9);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-function save(){
-  try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
-  if(fbReady&&db){
+function saveLocal(){
+  try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}
+  catch(e){showSyncStatus('⚠️ Armazenamento local cheio');}
+}
+
+function save(pathHint){
+  saveLocal();
+  if(!fbReady||!db)return;
+  if(pathHint==='evento'){
+    db.ref('sessao/evento').set(state.evento).catch(e=>console.warn(e));
+  }else if(pathHint==='projetos'){
+    db.ref('sessao/projetos').set(state.projetos).catch(e=>console.warn(e));
+  }else if(pathHint==='criterios'){
+    db.ref('sessao/criterios').set(state.criterios).catch(e=>console.warn(e));
+  }else if(pathHint&&pathHint.pid&&pathHint.user){
+    const entry=(state.avaliacoes[pathHint.pid]&&state.avaliacoes[pathHint.pid][pathHint.user])||null;
+    db.ref('sessao/avaliacoes/'+pathHint.pid+'/'+pathHint.user).set(entry).catch(e=>console.warn(e));
+  }else{
     const s={evento:state.evento,projetos:state.projetos,criterios:state.criterios,avaliacoes:state.avaliacoes};
     db.ref('sessao').set(s).catch(e=>console.warn(e));
-    showSyncStatus('☁️ Salvo');
   }
+  showSyncStatus('☁️ Salvo');
 }
-function saveLocal(){
-  try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
-}
+
 function load(){
   try{
     var d=localStorage.getItem('avaliacao_app');
@@ -420,7 +455,6 @@ function load(){
 function mostrarPainelLogin(){
   document.getElementById('painel-login').style.display='block';
   document.getElementById('painel-setup').style.display='none';
-  // Mostra link de setup só se não há senha criada
   document.getElementById('link-setup').style.display=state.adminSenha?'none':'block';
 }
 function mostrarPainelSetup(){
@@ -448,7 +482,7 @@ function fazerLogin(){
   const err=document.getElementById('login-erro');
   err.textContent='';
   if(!user||!pass){err.textContent='Preencha usuário e senha.';return;}
-  if(user==='admin'&&pass===state.adminSenha){entrarComoAdmin();return;}
+  if(user==='admin'&&state.adminSenha&&pass===state.adminSenha){entrarComoAdmin();return;}
   const av=state.avaliadores.find(a=>a.user.toLowerCase()===user&&a.pass===pass);
   if(av){
     sessaoAtual={user:av.user,perfil:'avaliador',nome:av.nome};
@@ -563,33 +597,32 @@ function resetApp(){
 }
 
 // ========== NOTA POR AVALIADOR ==========
-// Retorna as notas do avaliador logado para um projeto
 function notasDoAvaliador(pid){
   const user=sessaoAtual?sessaoAtual.user:'admin';
   return (state.avaliacoes[pid]&&state.avaliacoes[pid][user])||{};
 }
-// Calcula nota total do avaliador logado para um projeto
+function possuiAlgumaNota(uav){
+  if(!uav||typeof uav!=='object')return false;
+  return state.criterios.some(c=>uav[c.id]!==undefined&&uav[c.id]!==''&&!isNaN(parseFloat(uav[c.id])));
+}
 function notaAtual(pid){
   const av=notasDoAvaliador(pid);
   return state.criterios.reduce((s,c)=>s+(parseFloat(av[c.id])||0),0);
 }
-// Nota máxima possível
 function notaMax(){return state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);}
 
-// Status do projeto para o avaliador logado
 function statusProjeto(pid){
   const av=notasDoAvaliador(pid);
   const p=state.criterios.filter(c=>av[c.id]!==undefined&&av[c.id]!=='').length;
   if(!p)return'pendente';if(p===state.criterios.length)return'concluido';return'parcial';
 }
 
-// Media entre todos os avaliadores para um projeto
 function mediaGeral(pid){
   const avMap=state.avaliacoes[pid]||{};
-  const users=Object.keys(avMap);
-  if(!users.length)return null;
-  const totais=users.map(u=>{
-    return state.criterios.reduce((s,c)=>s+(parseFloat(avMap[u][c])||0),0);
+  const avaliadoresComNota=Object.keys(avMap).filter(u=>possuiAlgumaNota(avMap[u]));
+  if(!avaliadoresComNota.length)return null;
+  const totais=avaliadoresComNota.map(u=>{
+    return state.criterios.reduce((s,c)=>s+(parseFloat(avMap[u][c.id])||0),0);
   });
   return totais.reduce((a,b)=>a+b,0)/totais.length;
 }
@@ -616,7 +649,7 @@ function renderHeader(){
 
 function renderProjetos(){
   const q=(document.getElementById('busca-input').value||'').toLowerCase();
-  const list=state.projetos.filter(p=>!q||p.titulo.toLowerCase().includes(q)||p.grupo.toLowerCase().includes(q)||(p.integrantes||'').toLowerCase().includes(q));
+  const list=state.projetos.filter(p=>!q||String(p.titulo||'').toLowerCase().includes(q)||String(p.grupo||'').toLowerCase().includes(q)||String(p.integrantes||'').toLowerCase().includes(q));
   const el=document.getElementById('lista-projetos');
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">Nenhum projeto</div><div class="empty-sub">Adicione ou importe projetos.</div></div>';return;}
   const max=notaMax();
@@ -625,7 +658,7 @@ function renderProjetos(){
     const n=notaAtual(p.id);
     const bm={concluido:'<span class="badge badge-green">✓ '+n.toFixed(1)+'</span>',parcial:'<span class="badge badge-amber">Em andamento</span>',pendente:'<span class="badge badge-muted">Pendente</span>'};
     const at=p.adhoc?'<span class="adhoc-tag">★ Ad hoc</span> ':'';
-    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub" style="margin-top:3px">'+(p.integrantes||'')+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,(n/max)*100)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
+    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+escapeAttr(p.id)+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+escapeHtml(p.grupo)+' — '+escapeHtml(p.titulo)+'</div><div class="card-sub" style="margin-top:3px">'+escapeHtml(p.integrantes||'')+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,max>0?(n/max)*100:0)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
   }).join('');
 }
 
@@ -639,31 +672,30 @@ function renderAvaliacao(){
   if(!state.projetoAtivo){el.innerHTML='<div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Nenhum projeto selecionado</div><div class="empty-sub">Selecione um projeto na aba Projetos.</div></div>';return;}
   const p=state.projetos.find(x=>x.id===state.projetoAtivo);
   if(!p){el.innerHTML='';return;}
-  const av=notasDoAvaliador(p.id); // só as notas do avaliador logado
+  const av=notasDoAvaliador(p.id);
   const max=notaMax();const total=notaAtual(p.id);
   const eixos={};
   state.criterios.forEach(c=>{const k=c.eixo||'Critérios';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
 
-  // Fotos existentes
-  const fotos=av._fotos||[];
-  const fotosHtml=fotos.length?'<div class="fotos-wrap">'+fotos.map((f,i)=>'<img class="foto-thumb" src="'+f+'" onclick="verFoto('+i+',\''+p.id+'\')" alt="foto">').join('')+'</div>':'<div style="font-size:12px;color:var(--fg3)">Nenhuma foto adicionada.</div>';
+  const fotos=Array.isArray(av._fotos)?av._fotos:[];
+  const fotosHtml=fotos.length?'<div class="fotos-wrap">'+fotos.map((f,i)=>'<img class="foto-thumb" src="'+f+'" onclick="verFoto('+i+',\''+escapeAttr(p.id)+'\')" alt="foto">').join('')+'</div>':'<div style="font-size:12px;color:var(--fg3)">Nenhuma foto adicionada.</div>';
 
-  let html='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>';
+  let html='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+escapeHtml(p.grupo)+' — '+escapeHtml(p.titulo)+'</div><div class="card-sub">'+escapeHtml(p.integrantes||'')+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>';
 
   Object.entries(eixos).forEach(([eixo,crits])=>{
     const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
-    html+='<div class="sec-label">'+eixo+' <span style="font-weight:400;color:var(--fg3)">(máx '+em.toFixed(1)+')</span></div>';
+    html+='<div class="sec-label">'+escapeHtml(eixo)+' <span style="font-weight:400;color:var(--fg3)">(máx '+em.toFixed(1)+')</span></div>';
     crits.forEach(c=>{
       const vals=gerarValores(parseFloat(c.max));const sv=av[c.id];
-      html+='<div class="card"><div class="card-title">'+c.nome+'</div>'+(c.desc?'<div class="card-sub" style="margin-top:2px;margin-bottom:8px">'+c.desc+'</div>':'<div style="height:6px"></div>')+'<div class="score-wrap">'+vals.map(v=>'<button class="score-btn'+(sv===v?' sel':'')+'" onclick="setNota(\''+p.id+'\',\''+c.id+'\','+v+')">'+v+'</button>').join('')+'</div></div>';
+      html+='<div class="card"><div class="card-title">'+escapeHtml(c.nome)+'</div>'+(c.desc?'<div class="card-sub" style="margin-top:2px;margin-bottom:8px">'+escapeHtml(c.desc)+'</div>':'<div style="height:6px"></div>')+'<div class="score-wrap">'+vals.map(v=>'<button class="score-btn'+(sv===v?' sel':'')+'" onclick="setNota(\''+escapeAttr(p.id)+'\',\''+escapeAttr(c.id)+'\','+v+')">'+v+'</button>').join('')+'</div></div>';
     });
   });
 
   html+='<div class="total-box"><span class="total-label">Sua pontuação</span><span class="total-value">'+total.toFixed(1)+' <span style="font-size:16px;font-weight:400;opacity:.6">/ '+max.toFixed(1)+'</span></span></div>';
-  html+='<div class="field"><label class="label">Observações</label><textarea class="input" placeholder="Registre destaques ou sugestões..." oninput="setObs(\''+p.id+'\',this.value)">'+(av.obs||'')+'</textarea></div>';
+  html+='<div class="field"><label class="label">Observações</label><textarea class="input" placeholder="Registre destaques ou sugestões..." oninput="setObs(\''+escapeAttr(p.id)+'\',this.value)">'+escapeHtml(av.obs||'')+'</textarea></div>';
   html+='<div class="sec-label">Fotos do projeto</div>'+fotosHtml;
-  html+='<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="abrirCameraFoto(\''+p.id+'\')">📸 Tirar foto do projeto</button></div>';
-  html+='<div style="height:16px"></div><button class="btn btn-primary" onclick="concluirAvaliacao(\''+p.id+'\')">✓ Salvar e voltar</button><div style="height:8px"></div>';
+  html+='<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="abrirCameraFoto(\''+escapeAttr(p.id)+'\')">📸 Tirar foto do projeto</button></div>';
+  html+='<div style="height:16px"></div><button class="btn btn-primary" onclick="concluirAvaliacao(\''+escapeAttr(p.id)+'\')">✓ Salvar e voltar</button><div style="height:8px"></div>';
   el.innerHTML=html;
 }
 
@@ -679,7 +711,9 @@ function setNota(pid,cid,val){
   if(!state.avaliacoes[pid])state.avaliacoes[pid]={};
   if(!state.avaliacoes[pid][user])state.avaliacoes[pid][user]={};
   state.avaliacoes[pid][user][cid]=val;
-  save();renderAvaliacao();renderProjetos();
+  save({pid,user});
+  renderAvaliacao();
+  renderProjetos();
 }
 
 function setObs(pid,val){
@@ -687,11 +721,15 @@ function setObs(pid,val){
   if(!state.avaliacoes[pid])state.avaliacoes[pid]={};
   if(!state.avaliacoes[pid][user])state.avaliacoes[pid][user]={};
   state.avaliacoes[pid][user].obs=val;
-  save();
+  saveLocal();
+  clearTimeout(obsTimer);
+  obsTimer=setTimeout(()=>save({pid,user}),600);
 }
 
 function concluirAvaliacao(pid){
-  save();
+  const user=sessaoAtual?sessaoAtual.user:'admin';
+  clearTimeout(obsTimer);
+  save({pid,user});
   goTab('projetos',document.querySelector('[data-tab="projetos"]'));
 }
 
@@ -704,17 +742,17 @@ function renderResumo(){
     return;
   }
 
-  // Lista de avaliadores que já avaliaram algo
   const todosAvs=new Set();
   state.projetos.forEach(p=>{
-    Object.keys(state.avaliacoes[p.id]||{}).forEach(u=>todosAvs.add(u));
+    Object.keys(state.avaliacoes[p.id]||{}).forEach(u=>{
+      if(possuiAlgumaNota((state.avaliacoes[p.id]||{})[u]))todosAvs.add(u);
+    });
   });
   const avsArr=[...todosAvs];
 
-  // Cards de visão geral
   const conc=state.projetos.filter(p=>{
     const avMap=state.avaliacoes[p.id]||{};
-    return Object.keys(avMap).length>0 && Object.values(avMap).some(uav=>state.criterios.every(c=>uav[c.id]!==undefined&&uav[c.id]!==''));
+    return Object.values(avMap).some(uav=>state.criterios.length>0&&state.criterios.every(c=>uav[c.id]!==undefined&&uav[c.id]!==''));
   });
 
   let html='<div class="sec-label">Visão geral</div>';
@@ -724,10 +762,12 @@ function renderResumo(){
   html+='<div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--amber)">'+avsArr.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Avaliadores</div></div>';
   html+='</div>';
 
-  // Tabela de notas
   html+='<div class="sec-label">Notas por avaliador</div>';
   html+='<div style="overflow-x:auto"><table class="resumo-table"><thead><tr><th>Projeto</th>';
-  avsArr.forEach(u=>{ const nome=u==='admin'?'Admin':(state.avaliadores.find(a=>a.user===u)||{nome:u}).nome; html+='<th>'+nome+'</th>'; });
+  avsArr.forEach(u=>{
+    const nome=u==='admin'?'Admin':(state.avaliadores.find(a=>a.user===u)||{nome:u}).nome;
+    html+='<th>'+escapeHtml(nome)+'</th>';
+  });
   html+='<th>Média</th></tr></thead><tbody>';
 
   const rank=[];
@@ -737,16 +777,17 @@ function renderResumo(){
       const uav=avMap[u]||{};
       return state.criterios.reduce((s,c)=>s+(parseFloat(uav[c.id])||0),0);
     });
-    const media=notas.length?notas.reduce((a,b)=>a+b,0)/notas.filter((_,i)=>Object.keys(avMap[avsArr[i]]||{}).length>0).length:null;
-    rank.push({p,notas,media:isNaN(media)?null:media});
+    const validas=notas.filter((_,i)=>possuiAlgumaNota(avMap[avsArr[i]]));
+    const media=validas.length?validas.reduce((a,b)=>a+b,0)/validas.length:null;
+    rank.push({p,notas,media});
   });
-  rank.sort((a,b)=>(b.media||0)-(a.media||0));
+  rank.sort((a,b)=>(b.media??-1)-(a.media??-1));
 
   rank.forEach(({p,notas,media})=>{
-    html+='<tr><td><strong>'+p.grupo+'</strong><br><span style="font-size:11px;color:var(--fg3)">'+p.titulo+'</span></td>';
+    const avMap=state.avaliacoes[p.id]||{};
+    html+='<tr><td><strong>'+escapeHtml(p.grupo)+'</strong><br><span style="font-size:11px;color:var(--fg3)">'+escapeHtml(p.titulo)+'</span></td>';
     avsArr.forEach((u,i)=>{
-      const uav=state.avaliacoes[p.id]&&state.avaliacoes[p.id][u]||{};
-      const temNota=Object.keys(uav).some(k=>k!=='obs'&&k!=='_fotos');
+      const temNota=possuiAlgumaNota(avMap[u]);
       html+='<td>'+(temNota?notas[i].toFixed(1):'—')+'</td>';
     });
     html+='<td class="media">'+(media!==null?media.toFixed(2):'—')+'</td>';
@@ -754,14 +795,13 @@ function renderResumo(){
   });
   html+='</tbody></table></div>';
 
-  // Ranking
   const comMedia=rank.filter(r=>r.media!==null);
   if(comMedia.length){
     html+='<div class="sec-label" style="margin-top:16px">Ranking</div>';
     const medals=['🥇','🥈','🥉'];
     comMedia.forEach(({p,media},i)=>{
       const pct=max>0?(media/max)*100:0;
-      html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(medals[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,pct)+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+media.toFixed(2)+'</div></div></div>';
+      html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(medals[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+escapeHtml(p.grupo)+' — '+escapeHtml(p.titulo)+'</div><div class="card-sub">'+escapeHtml(p.integrantes||'')+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,pct)+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+media.toFixed(2)+'</div></div></div>';
     });
   }
 
@@ -774,7 +814,7 @@ function renderConfig(){
   document.getElementById('cfg-nome').textContent=ev?ev.nome:'Sem evento configurado';
   let info=[];if(ev){if(ev.inst)info.push(ev.inst);if(ev.disc)info.push(ev.disc);if(ev.data)info.push(ev.data);}
   document.getElementById('cfg-info').textContent=info.join(' · ');
-  // Critérios
+
   const el=document.getElementById('lista-criterios-cfg');
   if(!state.criterios.length){el.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum critério configurado.</div>';}
   else{
@@ -782,22 +822,24 @@ function renderConfig(){
     let html='';
     Object.entries(eixos).forEach(([eixo,crits])=>{
       const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
-      html+='<div style="font-size:11px;color:var(--fg3);margin:10px 0 5px;font-weight:600">'+eixo+' — máx '+em.toFixed(1)+'</div>';
-      crits.forEach(c=>{html+='<div class="crit-item"><div class="crit-item-info"><div class="crit-item-name">'+c.nome+'</div><div class="crit-item-meta">'+(c.desc?c.desc+' · ':'')+'Máx: '+c.max+'</div></div><button class="crit-remove" onclick="removerCriterio(\''+c.id+'\')">🗑</button></div>';});
+      html+='<div style="font-size:11px;color:var(--fg3);margin:10px 0 5px;font-weight:600">'+escapeHtml(eixo)+' — máx '+em.toFixed(1)+'</div>';
+      crits.forEach(c=>{
+        html+='<div class="crit-item"><div class="crit-item-info"><div class="crit-item-name">'+escapeHtml(c.nome)+'</div><div class="crit-item-meta">'+(c.desc?escapeHtml(c.desc)+' · ':'')+'Máx: '+c.max+'</div></div><button class="crit-remove" onclick="removerCriterio(\''+escapeAttr(c.id)+'\')">🗑</button></div>';
+      });
     });
     const tm=state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);
     html+='<div style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600">Total máximo: '+tm.toFixed(1)+' pontos</div>';
     el.innerHTML=html;
   }
-  // Avaliadores
+
   const ela=document.getElementById('lista-avaliadores');
   if(!state.avaliadores.length){ela.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum avaliador cadastrado.</div>';}
   else{
-    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-row"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+a.nome+'</div><div style="font-size:11px;color:var(--fg3)">@'+a.user+'</div></div><button class="crit-remove" onclick="removerAvaliador(\''+a.id+'\')">🗑</button></div>').join('');
+    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-row"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+escapeHtml(a.nome)+'</div><div style="font-size:11px;color:var(--fg3)">@'+escapeHtml(a.user)+'</div></div><button class="crit-remove" onclick="removerAvaliador(\''+escapeAttr(a.id)+'\')">🗑</button></div>').join('');
   }
 }
 
-function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save();renderConfig();}
+function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save('criterios');renderConfig();}
 function confirmLimpar(){if(confirm('Apagar todas as avaliações?')){state.avaliacoes={};save();renderAll();}}
 function confirmLimparProjetos(){if(confirm('Apagar TODOS os projetos e avaliações?')){state.projetos=[];state.avaliacoes={};save();renderAll();}}
 
@@ -813,7 +855,7 @@ function salvarEvento(){
   const nome=document.getElementById('ev-nome').value.trim();
   if(!nome){alert('Informe o nome do evento.');return;}
   state.evento={nome,inst:document.getElementById('ev-inst').value.trim(),disc:document.getElementById('ev-disc').value.trim(),data:document.getElementById('ev-data').value};
-  save();renderAll();closeModal('modal-evento');
+  save('evento');renderAll();closeModal('modal-evento');
 }
 function openAddProjetoModal(){
   document.getElementById('add-proj-title').textContent='Adicionar projeto';
@@ -826,14 +868,14 @@ function salvarProjeto(){
   const titulo=document.getElementById('proj-titulo').value.trim();
   if(!titulo){alert('Informe o título.');return;}
   state.projetos.push({id:uid(),grupo:document.getElementById('proj-grupo').value.trim()||'—',titulo,integrantes:document.getElementById('proj-integrantes').value.trim(),desc:document.getElementById('proj-desc').value.trim(),adhoc:document.getElementById('proj-adhoc').checked});
-  save();renderProjetos();closeModal('modal-add-projeto');
+  save('projetos');renderProjetos();closeModal('modal-add-projeto');
 }
 function openCriterioModal(){['crit-eixo','crit-nome','crit-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('crit-max').value='1.5';openModal('modal-criterio');}
 function salvarCriterio(){
   const nome=document.getElementById('crit-nome').value.trim();
   if(!nome){alert('Informe o nome.');return;}
   state.criterios.push({id:uid(),eixo:document.getElementById('crit-eixo').value.trim(),nome,desc:document.getElementById('crit-desc').value.trim(),max:parseFloat(document.getElementById('crit-max').value)});
-  save();renderConfig();closeModal('modal-criterio');
+  save('criterios');renderConfig();closeModal('modal-criterio');
 }
 
 // ========== CÂMERA QR ==========
@@ -868,7 +910,7 @@ function processarQR(texto){
   fecharLeitorQR();
   var id=null;
   try{var url=new URL(texto);id=url.searchParams.get('projeto');}
-  catch(e){if(texto.length<30)id=texto;}
+  catch(e){if(texto&&texto.length<30)id=texto.trim();}
   if(!id){alert('QR Code não reconhecido.');return;}
   var existe=state.projetos.find(function(p){return p.id===id;});
   if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
@@ -882,7 +924,7 @@ function buscarProjetoFirebase(id){
     if(!projetos||!Array.isArray(projetos)){alert('Projeto não encontrado.');return;}
     var p=projetos.find(function(x){return x.id===id;});
     if(!p){alert('Projeto não encontrado. ID: '+id);return;}
-    if(!state.projetos.find(function(x){return x.id===id;})){state.projetos.push(p);save();}
+    if(!state.projetos.find(function(x){return x.id===id;})){state.projetos.push(p);save('projetos');}
     renderProjetos();selecionarProjeto(id);showSyncStatus('✅ Importado via QR');
   });
 }
@@ -899,7 +941,7 @@ function abrirCameraFoto(pid){
   fotoProjetoId=pid;
   openModal('modal-foto');
   document.getElementById('foto-status').textContent='Posicione o projeto e toque em Capturar';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}})
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
     .then(function(stream){
       fotoStream=stream;var v=document.getElementById('foto-video');
       v.srcObject=stream;
@@ -909,17 +951,18 @@ function abrirCameraFoto(pid){
 function capturarFoto(){
   var v=document.getElementById('foto-video'),c=document.getElementById('foto-canvas');
   if(!fotoStream||v.readyState!==v.HAVE_ENOUGH_DATA){alert('Câmera ainda não pronta.');return;}
-  c.width=v.videoWidth;c.height=v.videoHeight;
+  const maxW=900;
+  const scale=v.videoWidth>maxW?maxW/v.videoWidth:1;
+  c.width=Math.round(v.videoWidth*scale);
+  c.height=Math.round(v.videoHeight*scale);
   var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
-  var dataUrl=c.toDataURL('image/jpeg',0.8);
-  // Salva na avaliação do usuário logado
+  var dataUrl=c.toDataURL('image/jpeg',0.72);
   var user=sessaoAtual?sessaoAtual.user:'admin';
   if(!state.avaliacoes[fotoProjetoId])state.avaliacoes[fotoProjetoId]={};
   if(!state.avaliacoes[fotoProjetoId][user])state.avaliacoes[fotoProjetoId][user]={};
-  if(!state.avaliacoes[fotoProjetoId][user]._fotos)state.avaliacoes[fotoProjetoId][user]._fotos=[];
+  if(!Array.isArray(state.avaliacoes[fotoProjetoId][user]._fotos))state.avaliacoes[fotoProjetoId][user]._fotos=[];
   state.avaliacoes[fotoProjetoId][user]._fotos.push(dataUrl);
-  save();
-  // Download automático
+  save({pid:fotoProjetoId,user});
   var a=document.createElement('a');
   var p=state.projetos.find(function(x){return x.id===fotoProjetoId;});
   a.download='foto_projeto_'+(p?p.grupo:'')+'_'+Date.now()+'.jpg';
@@ -937,7 +980,8 @@ function verFoto(idx,pid){
   var user=sessaoAtual?sessaoAtual.user:'admin';
   var fotos=(state.avaliacoes[pid]&&state.avaliacoes[pid][user]&&state.avaliacoes[pid][user]._fotos)||[];
   if(!fotos[idx])return;
-  var w=window.open();w.document.write('<img src="'+fotos[idx]+'" style="max-width:100%;max-height:100vh">');
+  document.getElementById('ver-foto-img').src=fotos[idx];
+  openModal('modal-ver-foto');
 }
 
 // ========== URL PARAMS ==========
@@ -954,7 +998,9 @@ function importarExcel(input){
   const file=input.files[0];if(!file)return;input.value='';
   const reader=new FileReader();
   reader.onload=e=>{
-    try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
       const data=XLSX.utils.sheet_to_json(ws,{defval:''});
       if(!data.length){alert('Planilha vazia.');return;}
       importRows=data;importCols=Object.keys(data[0]);renderImportModal();openModal('modal-import');
@@ -962,33 +1008,42 @@ function importarExcel(input){
   };
   reader.readAsArrayBuffer(file);
 }
-function guessCol(cols,hints){for(const h of hints){const f=cols.find(c=>c.toLowerCase().includes(h));if(f)return f;}return cols[0]||'';}
+function guessCol(cols,hints){for(const h of hints){const f=cols.find(c=>String(c).toLowerCase().includes(h));if(f)return f;}return cols[0]||'';}
 function renderImportModal(){
   const cG=guessCol(importCols,['grupo','num','n°','nº','id','#']);
   const cT=guessCol(importCols,['titulo','título','nome','projeto']);
   const cI=guessCol(importCols,['integr','aluno','membro','autor','equipe']);
-  const sel=s=>importCols.map(c=>'<option value="'+c+'"'+(c===s?' selected':'')+'>'+c+'</option>').join('');
-  document.getElementById('import-preview').innerHTML='<div style="font-size:13px;color:var(--fg2);margin-bottom:12px"><b>'+importRows.length+'</b> linha(s). Colunas: <span style="color:var(--fg3)">'+importCols.join(', ')+'</span></div>';
+  const sel=s=>importCols.map(c=>'<option value="'+escapeHtml(c)+'"'+(c===s?' selected':'')+'>'+escapeHtml(c)+'</option>').join('');
+  document.getElementById('import-preview').innerHTML='<div style="font-size:13px;color:var(--fg2);margin-bottom:12px"><b>'+importRows.length+'</b> linha(s). Colunas: <span style="color:var(--fg3)">'+escapeHtml(importCols.join(', '))+'</span></div>';
   document.getElementById('import-map').innerHTML='<div class="field"><label class="label">Coluna → Grupo</label><select class="input" id="map-grupo">'+sel(cG)+'</select></div><div class="field"><label class="label">Coluna → Título</label><select class="input" id="map-titulo">'+sel(cT)+'</select></div><div class="field"><label class="label">Coluna → Integrantes</label><select class="input" id="map-integ">'+sel(cI)+'</select></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><input type="checkbox" id="import-limpar" style="width:16px;height:16px;accent-color:var(--amber)"><label for="import-limpar" style="font-size:13px;color:var(--amber);cursor:pointer">Substituir lista atual</label></div>';
 }
 function confirmarImport(){
   const cG=document.getElementById('map-grupo').value,cT=document.getElementById('map-titulo').value,cI=document.getElementById('map-integ').value;
   const limpar=document.getElementById('import-limpar').checked;
-  const novos=importRows.filter(r=>r[cT]&&String(r[cT]).trim()).map(r=>({id:uid(),grupo:String(r[cG]||'—').trim(),titulo:String(r[cT]).trim(),integrantes:String(r[cI]||'').trim(),desc:'',adhoc:false}));
+  const novos=importRows
+    .filter(r=>r[cT]!==undefined&&r[cT]!==null&&String(r[cT]).trim()!=='')
+    .map(r=>({
+      id:uid(),
+      grupo:String(r[cG]??'—').trim()||'—',
+      titulo:String(r[cT]).trim(),
+      integrantes:String(r[cI]??'').trim(),
+      desc:'',
+      adhoc:false
+    }));
   if(!novos.length){alert('Nenhum projeto válido.');return;}
   if(limpar)state.projetos=novos;else state.projetos=[...state.projetos,...novos];
-  save();renderProjetos();closeModal('modal-import');showSyncStatus('✅ '+novos.length+' projeto(s) importado(s)');
+  save('projetos');renderProjetos();closeModal('modal-import');showSyncStatus('✅ '+novos.length+' projeto(s) importado(s)');
 }
 
 // ========== CSV EXPORT ==========
 function exportarCSV(){
-  const avsArr=[...new Set(state.projetos.flatMap(p=>Object.keys(state.avaliacoes[p.id]||{})))];
+  const avsArr=[...new Set(state.projetos.flatMap(p=>Object.keys(state.avaliacoes[p.id]||{}).filter(u=>possuiAlgumaNota((state.avaliacoes[p.id]||{})[u]))))];
   const avNomes=avsArr.map(u=>u==='admin'?'Admin':(state.avaliadores.find(a=>a.user===u)||{nome:u}).nome);
   const cols=['grupo','titulo','integrantes',...avNomes,'media','obs_admin'];
   const rows=state.projetos.map(p=>{
     const avMap=state.avaliacoes[p.id]||{};
     const notas=avsArr.map(u=>state.criterios.reduce((s,c)=>s+(parseFloat((avMap[u]||{})[c.id])||0),0));
-    const validas=notas.filter((_,i)=>Object.keys(avMap[avsArr[i]]||{}).length>0);
+    const validas=notas.filter((_,i)=>possuiAlgumaNota(avMap[avsArr[i]]));
     const media=validas.length?validas.reduce((a,b)=>a+b,0)/validas.length:null;
     const obsAdmin=(avMap['admin']||{}).obs||'';
     return[p.grupo,p.titulo,p.integrantes,...notas.map(n=>n.toFixed(1)),media!==null?media.toFixed(2):'',obsAdmin].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',');
