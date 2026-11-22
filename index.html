@@ -139,6 +139,9 @@ textarea.input{resize:none;min-height:72px}
     <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openCriterioModal()">+ Novo critério</button>
     <div class="sec-label">Avaliador</div>
     <div class="field"><input class="input" id="cfg-avaliador" placeholder="Seu nome ou identificação" oninput="saveAvaliador()"></div>
+    <div class="sec-label">PIN do avaliador</div>
+    <div class="field"><input class="input" id="cfg-pin" type="password" placeholder="PIN para liberar avaliação" oninput="savePIN()"></div>
+    <div style="font-size:12px;color:var(--fg3);margin-top:-6px;margin-bottom:12px">Quem abrir o app via QR Code precisará digitar este PIN para avaliar.</div>
     <div class="sec-label" style="margin-top:20px">Dados</div>
     <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
   </div>
@@ -269,7 +272,8 @@ function showSyncStatus(msg){
   el.textContent=msg;el.style.opacity='1';setTimeout(()=>{el.style.opacity='0';},3000);
 }
 
-let state={evento:null,avaliador:'',projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null};
+let state={evento:null,avaliador:'',pin:'',projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null};
+let pinAutenticado=false;
 
 function save(){
   try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
@@ -293,6 +297,7 @@ if(!state.criterios.length){state.criterios=[
   {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
 ];}
 if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
+if(state.pin)document.getElementById('cfg-pin').value=state.pin;
 renderAll();
 
 function uid(){return Math.random().toString(36).slice(2,9);}
@@ -335,13 +340,26 @@ function renderProjetos(){
   }).join('');
 }
 
-function selecionarProjeto(pid){state.projetoAtivo=pid;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));}
+function selecionarProjeto(pid){state.projetoAtivo=pid;if(!state._abriuViaQR)pinAutenticado=true;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));}
 
 function renderAvaliacao(){
   const el=document.getElementById('avaliacao-content');
   if(!state.projetoAtivo){el.innerHTML='<div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Nenhum projeto selecionado</div><div class="empty-sub">Selecione um projeto na aba Projetos.</div></div>';return;}
   const p=state.projetos.find(x=>x.id===state.projetoAtivo);
   if(!p){el.innerHTML='';return;}
+  // Bloqueia se veio via QR e PIN está configurado e não autenticou
+  if(state.pin&&!pinAutenticado&&state._abriuViaQR){
+    el.innerHTML='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+p.integrantes+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>'
+      +'<div class="card" style="margin-top:8px">'
+      +'<div style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center">🔒 Área restrita</div>'
+      +'<div style="font-size:13px;color:var(--fg2);margin-bottom:14px;text-align:center">Digite o PIN do avaliador para continuar</div>'
+      +'<div class="field"><input class="input" id="pin-input" type="password" placeholder="PIN" style="text-align:center;font-size:20px;letter-spacing:4px" onkeydown="if(event.key===\'Enter\')verificarPIN()"></div>'
+      +'<div id="pin-erro" style="color:var(--red);font-size:12px;text-align:center;margin-bottom:8px;display:none">PIN incorreto. Tente novamente.</div>'
+      +'<button class="btn btn-primary" onclick="verificarPIN()">Entrar</button>'
+      +'</div>';
+    setTimeout(()=>{const i=document.getElementById('pin-input');if(i)i.focus();},100);
+    return;
+  }
   const av=state.avaliacoes[p.id]||{};
   const max=notaMax();const total=nota(p.id);
   const eixos={};
@@ -389,6 +407,7 @@ function renderConfig(){
   let info=[];if(ev){if(ev.inst)info.push(ev.inst);if(ev.disc)info.push(ev.disc);if(ev.data)info.push(ev.data);}
   document.getElementById('cfg-info').textContent=info.join(' · ');
   if(state.avaliador)document.getElementById('cfg-avaliador').value=state.avaliador;
+  if(state.pin)document.getElementById('cfg-pin').value=state.pin;
   const el=document.getElementById('lista-criterios-cfg');
   if(!state.criterios.length){el.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum critério configurado.</div>';return;}
   const eixos={};state.criterios.forEach(c=>{const k=c.eixo||'Sem eixo';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
@@ -404,6 +423,12 @@ function renderConfig(){
 }
 
 function saveAvaliador(){state.avaliador=document.getElementById('cfg-avaliador').value;save();}
+function savePIN(){state.pin=document.getElementById('cfg-pin').value;save();}
+function verificarPIN(){
+  const digitado=document.getElementById('pin-input').value;
+  if(digitado===state.pin){pinAutenticado=true;renderAvaliacao();}
+  else{const e=document.getElementById('pin-erro');if(e)e.style.display='block';const i=document.getElementById('pin-input');if(i){i.value='';i.focus();}}
+}
 function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save();renderConfig();}
 function confirmLimpar(){if(confirm('Apagar todas as avaliações?')){state.avaliacoes={};save();renderAll();}}
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -486,6 +511,7 @@ function fecharLeitorQR(){
 }
 function verificarURLParams(){
   var params=new URLSearchParams(window.location.search);var pid=params.get('projeto');if(!pid)return;
+  state._abriuViaQR=true;pinAutenticado=false;
   var existe=state.projetos.find(function(p){return p.id===pid;});
   if(existe){state.projetoAtivo=pid;goTab('avaliacao',document.querySelector('[data-tab="avaliacao"]'));showSyncStatus('✅ Projeto aberto via QR');}
   else setTimeout(function(){buscarProjetoFirebase(pid);},1500);
