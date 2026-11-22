@@ -92,11 +92,11 @@ textarea.input{resize:none;min-height:72px}
 .avaliador-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .avaliador-row:last-child{border:none}
 /* TELA LOGIN */
-#tela-login{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;max-width:480px;margin:0 auto}
+#tela-login{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;max-width:480px;margin:0 auto;overflow-y:auto}
 #tela-login.oculta{display:none}
 .login-logo{font-size:48px;margin-bottom:16px;text-align:center}
 .login-titulo{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center}
-.login-sub{font-size:13px;color:var(--fg3);margin-bottom:28px;text-align:center}
+.login-sub{font-size:13px;color:var(--fg3);margin-bottom:20px;text-align:center}
 .login-erro{color:var(--red);font-size:13px;text-align:center;margin-top:8px;min-height:20px}
 .login-link{color:var(--amber);font-size:13px;text-align:center;cursor:pointer;margin-top:12px;text-decoration:underline}
 /* FOTOS */
@@ -112,32 +112,39 @@ textarea.input{resize:none;min-height:72px}
 </head>
 <body>
 
-<!-- [LOCAL 1] TELA DE LOGIN -->
+<!-- TELA DE LOGIN -->
 <div id="tela-login">
   <div style="width:100%;max-width:360px">
     <div class="login-logo">🎓</div>
     <div class="login-titulo">Avaliação Acadêmica</div>
-    <div class="login-sub">Selecione seu perfil para acessar</div>
+    <div class="login-sub">Escolha como deseja entrar</div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;background:var(--bg2);padding:4px;border-radius:var(--radius)">
-      <button type="button" id="btn-modo-admin" class="btn btn-sm" style="background:var(--green);color:#0F1E0F" onclick="selecionarModoLogin('admin')">👑 Organizador</button>
-      <button type="button" id="btn-modo-av" class="btn btn-sm" style="background:transparent;color:var(--fg2)" onclick="selecionarModoLogin('avaliador')">✏️ Avaliador</button>
+    <!-- SELETOR DE PERFIL -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;background:var(--bg2);padding:4px;border-radius:var(--radius)">
+      <button type="button" id="btn-modo-admin" class="btn btn-sm" style="background:var(--green);color:#0F1E0F" onclick="irParaLoginAdmin()">👑 Organizador</button>
+      <button type="button" id="btn-modo-av" class="btn btn-sm" style="background:transparent;color:var(--fg2)" onclick="irParaLoginAvaliador()">✏️ Avaliador</button>
     </div>
 
-    <div id="painel-login-admin">
+    <!-- BOTÃO EXPLÍCITO DE PRIMEIRO ACESSO DO ORGANIZADOR -->
+    <div style="margin-bottom:16px">
+      <button type="button" id="btn-primeiro-acesso" class="btn btn-secondary btn-sm" style="width:100%;border:1px solid rgba(240,165,0,.35);color:var(--amber)" onclick="abrirPrimeiroAcessoAdmin()">
+        🆕 Primeiro acesso — Configurar Organizador
+      </button>
+    </div>
+
+    <!-- PAINEL LOGIN ORGANIZADOR -->
+    <div id="painel-login-admin" style="display:block">
       <div class="field">
         <label class="label">Senha do Organizador</label>
         <input class="input" id="login-admin-pass" type="password" placeholder="Digite a senha do organizador" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLoginAdmin()">
       </div>
       <div class="login-erro" id="login-erro-admin"></div>
       <div style="height:8px"></div>
-      <button class="btn btn-primary" onclick="fazerLoginAdmin()">Entrar como Organizador</button>
-      <div style="display:flex;justify-content:space-between;margin-top:14px">
-        <span id="link-setup" class="login-link" style="margin-top:0;display:none" onclick="mostrarPainelSetup()">Criar senha inicial</span>
-        <span id="link-recuperar-admin" class="login-link" style="margin-top:0" onclick="mostrarPainelRecuperar()">Esqueci minha senha</span>
-      </div>
+      <button type="button" class="btn btn-primary" onclick="fazerLoginAdmin()">Entrar como Organizador</button>
+      <div class="login-link" onclick="abrirRecuperarAdmin()">Esqueci minha senha</div>
     </div>
 
+    <!-- PAINEL LOGIN AVALIADOR -->
     <div id="painel-login-av" style="display:none">
       <div class="field">
         <label class="label">Usuário do Avaliador</label>
@@ -149,37 +156,39 @@ textarea.input{resize:none;min-height:72px}
       </div>
       <div class="login-erro" id="login-erro-av"></div>
       <div style="height:8px"></div>
-      <button class="btn btn-primary" onclick="fazerLoginAvaliador()">Entrar como Avaliador</button>
-      <div class="login-link" onclick="alert('Solicite ao Organizador do evento a redefinição da sua senha na aba Config > Avaliadores.')">Esqueci minha senha</div>
+      <button type="button" class="btn btn-primary" onclick="fazerLoginAvaliador()">Entrar como Avaliador</button>
+      <div class="login-link" onclick="mostrarAjudaSenhaAvaliador()">Esqueci minha senha</div>
     </div>
 
+    <!-- PAINEL PRIMEIRO ACESSO / CONFIGURAR ORGANIZADOR -->
     <div id="painel-setup" style="display:none">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Configurar acesso do Organizador</div>
-      <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Defina a senha e uma palavra/código de recuperação para emergências.</div>
-      <div class="field"><label class="label">Nova senha (mín. 4 caracteres)</label><input class="input" id="setup-senha" type="password" placeholder="Senha do organizador"></div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Primeiro acesso — Organizador</div>
+      <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Crie a senha de acesso e uma palavra/código de recuperação.</div>
+      <div class="field"><label class="label">Nova senha (mín. 4 caracteres)</label><input class="input" id="setup-senha" type="password" placeholder="Crie a senha do organizador"></div>
       <div class="field"><label class="label">Confirmar senha</label><input class="input" id="setup-senha2" type="password" placeholder="Repita a senha"></div>
-      <div class="field"><label class="label">Palavra ou código de recuperação</label><input class="input" id="setup-rec" placeholder="Ex: fatec2026 (guarde para recuperar senha)"></div>
+      <div class="field"><label class="label">Palavra ou código de recuperação</label><input class="input" id="setup-rec" placeholder="Ex: evento2026"></div>
       <div class="login-erro" id="setup-erro"></div>
       <div style="height:8px"></div>
-      <button class="btn btn-primary" onclick="confirmarSetup()">Salvar e entrar como Organizador</button>
-      <div class="login-link" onclick="selecionarModoLogin('admin')">← Voltar ao login</div>
+      <button type="button" class="btn btn-primary" onclick="confirmarSetup()">Salvar e entrar como Organizador</button>
+      <div class="login-link" onclick="irParaLoginAdmin()">← Voltar para o login do Organizador</div>
     </div>
 
+    <!-- PAINEL RECUPERAR SENHA ORGANIZADOR -->
     <div id="painel-recuperar" style="display:none">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">Recuperar senha do Organizador</div>
-      <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Informe a palavra/código de recuperação cadastrado no primeiro acesso.</div>
+      <div style="font-size:12px;color:var(--fg3);margin-bottom:14px">Digite o código/palavra de recuperação cadastrado para definir uma nova senha.</div>
       <div class="field"><label class="label">Código de recuperação</label><input class="input" id="rec-codigo" placeholder="Palavra ou código de recuperação"></div>
       <div class="field"><label class="label">Nova senha (mín. 4 caracteres)</label><input class="input" id="rec-nova" type="password" placeholder="Nova senha"></div>
       <div class="field"><label class="label">Confirmar nova senha</label><input class="input" id="rec-nova2" type="password" placeholder="Repita a nova senha"></div>
       <div class="login-erro" id="rec-erro"></div>
       <div style="height:8px"></div>
-      <button class="btn btn-primary" onclick="confirmarRecuperacaoAdmin()">Redefinir senha e entrar</button>
-      <div class="login-link" onclick="selecionarModoLogin('admin')">← Voltar ao login</div>
+      <button type="button" class="btn btn-primary" onclick="confirmarRecuperacaoAdmin()">Redefinir senha e entrar</button>
+      <div class="login-link" onclick="irParaLoginAdmin()">← Voltar para o login do Organizador</div>
     </div>
   </div>
 </div>
 
-<!-- [LOCAL 2] ESTRUTURA PRINCIPAL DO APP -->
+<!-- ESTRUTURA PRINCIPAL DO APP -->
 <div id="app">
   <div class="header">
     <div class="header-top">
@@ -410,7 +419,7 @@ function escapeAttr(val){
   return String(val ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
-// [LOCAL 3] ========== FIREBASE ==========
+// ========== FIREBASE ==========
 const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
 let db=null,fbReady=false,obsTimer=null;
 
@@ -515,7 +524,7 @@ function load(){
   }catch(e){}
 }
 
-// [LOCAL 4] ========== AUTENTICAÇÃO, SINCRONIZAÇÃO PRÉ-LOGIN E RECUPERAÇÃO ==========
+// ========== AUTENTICAÇÃO, SINCRONIZAÇÃO PRÉ-LOGIN E RECUPERAÇÃO ==========
 function syncAuthRemoto(){
   if(typeof firebase==='undefined')return Promise.resolve();
   try{
@@ -527,52 +536,71 @@ function syncAuthRemoto(){
       if(data.adminSenha){state.adminSenha=data.adminSenha;}
       if(data.adminRec){state.adminRec=data.adminRec;}
       saveLocal();
-      atualizarBotoesAuthAdmin();
     }).catch(()=>{});
   }catch(e){return Promise.resolve();}
 }
 
-function atualizarBotoesAuthAdmin(){
-  const temSenha=Boolean(state.adminSenha);
-  const linkSetup=document.getElementById('link-setup');
-  const linkRec=document.getElementById('link-recuperar-admin');
-  if(linkSetup)linkSetup.style.display=temSenha?'none':'inline-block';
-  if(linkRec)linkRec.style.display=temSenha?'inline-block':'none';
+function esconderTodosPaineisLogin(){
+  ['painel-login-admin','painel-login-av','painel-setup','painel-recuperar'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display='none';
+  });
 }
 
-function selecionarModoLogin(modo){
+function destacarAbaPerfil(modo){
   const isAdmin=modo==='admin';
-  document.getElementById('btn-modo-admin').style.background=isAdmin?'var(--green)':'transparent';
-  document.getElementById('btn-modo-admin').style.color=isAdmin?'#0F1E0F':'var(--fg2)';
-  document.getElementById('btn-modo-av').style.background=!isAdmin?'var(--green)':'transparent';
-  document.getElementById('btn-modo-av').style.color=!isAdmin?'#0F1E0F':'var(--fg2)';
-
-  document.getElementById('painel-setup').style.display='none';
-  document.getElementById('painel-recuperar').style.display='none';
-  document.getElementById('painel-login-admin').style.display=isAdmin?'block':'none';
-  document.getElementById('painel-login-av').style.display=!isAdmin?'block':'none';
-
-  document.getElementById('login-erro-admin').textContent='';
-  document.getElementById('login-erro-av').textContent='';
-  atualizarBotoesAuthAdmin();
-
-  if(isAdmin&&!state.adminSenha){
-    mostrarPainelSetup();
+  const bAdmin=document.getElementById('btn-modo-admin');
+  const bAv=document.getElementById('btn-modo-av');
+  if(bAdmin){
+    bAdmin.style.background=isAdmin?'var(--green)':'transparent';
+    bAdmin.style.color=isAdmin?'#0F1E0F':'var(--fg2)';
+  }
+  if(bAv){
+    bAv.style.background=!isAdmin?'var(--green)':'transparent';
+    bAv.style.color=!isAdmin?'#0F1E0F':'var(--fg2)';
   }
 }
 
-function mostrarPainelSetup(){
-  ['painel-login-admin','painel-login-av','painel-recuperar'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('painel-setup').style.display='block';
-  ['setup-senha','setup-senha2','setup-rec'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('setup-erro').textContent='';
+function irParaLoginAdmin(){
+  destacarAbaPerfil('admin');
+  esconderTodosPaineisLogin();
+  document.getElementById('login-erro-admin').textContent='';
+  document.getElementById('painel-login-admin').style.display='block';
 }
 
-function mostrarPainelRecuperar(){
-  ['painel-login-admin','painel-login-av','painel-setup'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('painel-recuperar').style.display='block';
-  ['rec-codigo','rec-nova','rec-nova2'].forEach(id=>document.getElementById(id).value='');
+function irParaLoginAvaliador(){
+  destacarAbaPerfil('avaliador');
+  esconderTodosPaineisLogin();
+  document.getElementById('login-erro-av').textContent='';
+  document.getElementById('painel-login-av').style.display='block';
+  syncAuthRemoto();
+}
+
+function abrirPrimeiroAcessoAdmin(){
+  destacarAbaPerfil('admin');
+  esconderTodosPaineisLogin();
+  ['setup-senha','setup-senha2','setup-rec'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.value='';
+  });
+  document.getElementById('setup-erro').textContent='';
+  document.getElementById('painel-setup').style.display='block';
+}
+
+function abrirRecuperarAdmin(){
+  destacarAbaPerfil('admin');
+  esconderTodosPaineisLogin();
+  ['rec-codigo','rec-nova','rec-nova2'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.value='';
+  });
   document.getElementById('rec-erro').textContent='';
+  document.getElementById('painel-recuperar').style.display='block';
+  syncAuthRemoto();
+}
+
+function mostrarAjudaSenhaAvaliador(){
+  alert('Caso tenha esquecido sua senha de avaliador, peça ao Organizador para redefini-la na aba Config > Avaliadores (ícone 🔑).');
 }
 
 function confirmarSetup(){
@@ -594,7 +622,7 @@ function confirmarRecuperacaoAdmin(){
   const n1=document.getElementById('rec-nova').value;
   const n2=document.getElementById('rec-nova2').value;
   const err=document.getElementById('rec-erro');
-  if(!state.adminRec){err.textContent='Nenhuma palavra de recuperação foi cadastrada neste evento.';return;}
+  if(!state.adminRec){err.textContent='Nenhum código de recuperação encontrado. Use "Primeiro acesso — Configurar Organizador".';return;}
   if(cod.toLowerCase()!==String(state.adminRec).trim().toLowerCase()){err.textContent='Código de recuperação incorreto.';return;}
   if(!n1||n1.length<4){err.textContent='A nova senha deve ter no mínimo 4 caracteres.';return;}
   if(n1!==n2){err.textContent='As senhas não coincidem.';return;}
@@ -609,7 +637,10 @@ async function fazerLoginAdmin(){
   err.textContent='';
   if(!pass){err.textContent='Digite a senha do organizador.';return;}
   if(!state.adminSenha){await syncAuthRemoto();}
-  if(!state.adminSenha){mostrarPainelSetup();return;}
+  if(!state.adminSenha){
+    err.textContent='Nenhuma senha configurada ainda. Clique em "Primeiro acesso — Configurar Organizador".';
+    return;
+  }
   if(pass===state.adminSenha){
     entrarComoAdmin();
     return;
@@ -624,8 +655,8 @@ async function fazerLoginAvaliador(){
   const err=document.getElementById('login-erro-av');
   err.textContent='';
   if(!user||!pass){err.textContent='Preencha usuário e senha.';return;}
-  if(!state.avaliadores.length){await syncAuthRemoto();}
-  const av=state.avaliadores.find(a=>a.user.toLowerCase()===user&&a.pass===pass);
+  await syncAuthRemoto();
+  const av=(state.avaliadores||[]).find(a=>String(a.user||'').toLowerCase()===user&&String(a.pass||'')===pass);
   if(av){
     sessaoAtual={user:av.user,perfil:'avaliador',nome:av.nome};
     localStorage.setItem('avaliacao_sessao',JSON.stringify(sessaoAtual));
@@ -660,7 +691,8 @@ function fazerLogout(){
   document.getElementById('login-admin-pass').value='';
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
-  syncAuthRemoto().then(()=>selecionarModoLogin('admin'));
+  irParaLoginAdmin();
+  syncAuthRemoto();
 }
 
 function aplicarPermissoes(){
@@ -690,10 +722,14 @@ if(!state.criterios||!state.criterios.length){
     {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
   ];
 }
-if(sessaoAtual){abrirApp();}
-else{syncAuthRemoto().then(()=>selecionarModoLogin('admin'));}
+if(sessaoAtual){
+  abrirApp();
+}else{
+  irParaLoginAdmin();
+  syncAuthRemoto();
+}
 
-// [LOCAL 5] ========== AVALIADORES ==========
+// ========== AVALIADORES ==========
 function openAvaliadorModal(){
   ['av-nome','av-user','av-pass'].forEach(id=>document.getElementById(id).value='');
   openModal('modal-avaliador');
