@@ -89,46 +89,54 @@ textarea.input{resize:none;min-height:72px}
 .search-wrap{position:relative;margin-bottom:12px}
 .search-wrap .input{padding-left:36px}
 .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--fg3)}
-/* LOGIN */
+.avaliador-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.avaliador-row:last-child{border:none}
+/* TELA LOGIN */
 #tela-login{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;max-width:480px;margin:0 auto}
 #tela-login.oculta{display:none}
-.login-logo{font-size:48px;margin-bottom:16px}
+.login-logo{font-size:48px;margin-bottom:16px;text-align:center}
 .login-titulo{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center}
-.login-sub{font-size:13px;color:var(--fg3);margin-bottom:32px;text-align:center}
-.login-box{width:100%;max-width:360px}
+.login-sub{font-size:13px;color:var(--fg3);margin-bottom:28px;text-align:center}
 .login-erro{color:var(--red);font-size:13px;text-align:center;margin-top:8px;min-height:20px}
-.avaliador-item{background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.avaliador-nome{font-size:13px;font-weight:600}
-.avaliador-user{font-size:11px;color:var(--fg3);margin-top:2px}
+.login-link{color:var(--amber);font-size:13px;text-align:center;cursor:pointer;margin-top:12px;text-decoration:underline}
+/* FOTOS */
+.fotos-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.foto-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,255,255,.1)}
+/* RESUMO TABLE */
+.resumo-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+.resumo-table th{background:var(--bg3);color:var(--fg2);padding:8px 6px;text-align:left;font-weight:600;border-bottom:1px solid rgba(255,255,255,.08)}
+.resumo-table td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--fg)}
+.resumo-table tr:last-child td{border:none}
+.resumo-table .media{font-weight:700;color:var(--green)}
 </style>
 </head>
 <body>
 
 <!-- TELA DE LOGIN -->
 <div id="tela-login">
-  <div id="login-setup" style="width:100%;max-width:360px;display:none">
-    <div style="text-align:center;margin-bottom:24px">
-      <div class="login-logo">🎓</div>
-      <div class="login-titulo">Configuração inicial</div>
-      <div class="login-sub">Defina a senha do organizador para começar</div>
-    </div>
-    <div class="field"><label class="label">Senha do organizador</label><input class="input" id="setup-senha" type="password" placeholder="Crie uma senha forte"></div>
-    <div class="field"><label class="label">Confirmar senha</label><input class="input" id="setup-senha2" type="password" placeholder="Digite novamente"></div>
-    <div class="login-erro" id="setup-erro"></div>
-    <div style="height:8px"></div>
-    <button class="btn btn-primary" onclick="confirmarSetup()">Criar senha e entrar</button>
-  </div>
-  <div id="login-form" style="width:100%;max-width:360px;display:none">
-    <div style="text-align:center;margin-bottom:24px">
-      <div class="login-logo">🎓</div>
-      <div class="login-titulo">Avaliação Acadêmica</div>
-      <div class="login-sub">Faça login para continuar</div>
-    </div>
-    <div class="field"><label class="label">Usuário</label><input class="input" id="login-user" placeholder="Ex: avaliador1 ou admin" autocomplete="username"></div>
+  <!-- Painel Login normal -->
+  <div id="painel-login" style="width:100%;max-width:360px">
+    <div class="login-logo">🎓</div>
+    <div class="login-titulo">Avaliação Acadêmica</div>
+    <div class="login-sub">Faça login para continuar</div>
+    <div class="field"><label class="label">Usuário</label><input class="input" id="login-user" placeholder="admin ou seu usuário" autocomplete="username"></div>
     <div class="field"><label class="label">Senha</label><input class="input" id="login-pass" type="password" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
     <div class="login-erro" id="login-erro"></div>
     <div style="height:8px"></div>
     <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
+    <div id="link-setup" class="login-link" style="display:none" onclick="mostrarPainelSetup()">Primeiro acesso — configurar senha do organizador</div>
+  </div>
+  <!-- Painel Setup (criar senha admin) -->
+  <div id="painel-setup" style="width:100%;max-width:360px;display:none">
+    <div class="login-logo">🔑</div>
+    <div class="login-titulo">Criar senha do organizador</div>
+    <div class="login-sub">Esta senha será usada pelo organizador do evento. Faça isso só uma vez.</div>
+    <div class="field"><label class="label">Nova senha</label><input class="input" id="setup-senha" type="password" placeholder="Mínimo 4 caracteres"></div>
+    <div class="field"><label class="label">Confirmar senha</label><input class="input" id="setup-senha2" type="password" placeholder="Repita a senha"></div>
+    <div class="login-erro" id="setup-erro"></div>
+    <div style="height:8px"></div>
+    <button class="btn btn-primary" onclick="confirmarSetup()">Criar senha e entrar como organizador</button>
+    <div class="login-link" onclick="mostrarPainelLogin()" style="margin-top:12px">← Voltar ao login</div>
   </div>
 </div>
 
@@ -155,8 +163,8 @@ textarea.input{resize:none;min-height:72px}
     </div>
     <div id="lista-projetos"></div>
     <div id="botoes-projetos" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <button class="btn btn-secondary" onclick="openAddProjetoModal(false)">+ Adicionar</button>
-      <button class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
+      <button id="btn-add-proj" class="btn btn-secondary" onclick="openAddProjetoModal(false)">+ Adicionar</button>
+      <button id="btn-import-proj" class="btn btn-secondary" onclick="document.getElementById('xls-input').click()">📂 Excel</button>
       <button class="btn btn-secondary" style="grid-column:span 2;background:var(--bg3);border:1px solid rgba(124,201,106,.3);color:var(--green)" onclick="abrirLeitorQR()">📷 Ler QR Code do projeto</button>
     </div>
     <input type="file" id="xls-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importarExcel(this)">
@@ -184,7 +192,7 @@ textarea.input{resize:none;min-height:72px}
     <div id="lista-avaliadores"></div>
     <button class="btn btn-secondary" style="margin-top:4px;font-size:13px;padding:10px" onclick="openAvaliadorModal()">+ Novo avaliador</button>
     <div class="sec-label">Senha do organizador</div>
-    <button class="btn btn-secondary btn-sm" onclick="openTrocarSenhaModal()">🔑 Trocar senha do admin</button>
+    <button class="btn btn-secondary btn-sm" onclick="openTrocarSenhaModal()">🔑 Alterar senha do organizador</button>
     <div class="sec-label" style="margin-top:20px">Dados</div>
     <button class="btn btn-danger btn-sm" onclick="confirmLimpar()">🗑 Limpar todas as avaliações</button>
     <div style="height:8px"></div>
@@ -201,7 +209,7 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- MODAL EVENTO -->
+<!-- MODAIS -->
 <div class="overlay" id="modal-evento">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -217,7 +225,6 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- MODAL ADICIONAR PROJETO -->
 <div class="overlay" id="modal-add-projeto">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -239,24 +246,38 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- MODAL QR CODE -->
 <div class="overlay" id="modal-qr">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">📷 Ler QR Code do projeto</div>
-    <div id="qr-status" style="font-size:13px;color:var(--fg2);margin-bottom:12px;text-align:center">Aponte a câmera para o QR Code</div>
+    <div id="qr-status" style="font-size:13px;color:var(--fg2);margin-bottom:12px;text-align:center">Iniciando câmera...</div>
     <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1">
       <video id="qr-video" style="width:100%;height:100%;object-fit:cover" playsinline muted></video>
       <canvas id="qr-canvas" style="display:none"></canvas>
-      <div style="position:absolute;inset:0;border:2px solid var(--green);border-radius:12px;pointer-events:none;box-shadow:inset 0 0 0 40px rgba(0,0,0,.4)">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border:3px solid var(--green);border-radius:8px"></div>
+      <div style="position:absolute;inset:0;pointer-events:none">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border:3px solid var(--green);border-radius:8px;box-shadow:0 0 0 1000px rgba(0,0,0,.4)"></div>
       </div>
     </div>
     <div style="margin-top:12px"><button class="btn btn-secondary" onclick="fecharLeitorQR()">Cancelar</button></div>
   </div>
 </div>
 
-<!-- MODAL IMPORTAR EXCEL -->
+<div class="overlay" id="modal-foto">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📸 Tirar foto do projeto</div>
+    <div id="foto-status" style="font-size:13px;color:var(--fg2);margin-bottom:12px;text-align:center">Posicione o projeto e clique em Capturar</div>
+    <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3">
+      <video id="foto-video" style="width:100%;height:100%;object-fit:cover" playsinline muted></video>
+    </div>
+    <canvas id="foto-canvas" style="display:none"></canvas>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="fecharCamera()">Cancelar</button>
+      <button class="btn btn-primary" onclick="capturarFoto()">📸 Capturar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-import">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -270,7 +291,6 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- MODAL CRITÉRIO -->
 <div class="overlay" id="modal-criterio">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -292,7 +312,6 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- MODAL AVALIADOR -->
 <div class="overlay" id="modal-avaliador">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -307,11 +326,10 @@ textarea.input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- MODAL TROCAR SENHA ADMIN -->
 <div class="overlay" id="modal-trocar-senha">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Trocar senha do organizador</div>
+    <div class="modal-title">Alterar senha do organizador</div>
     <div class="field"><label class="label">Senha atual</label><input class="input" id="ts-atual" type="password" placeholder="Senha atual"></div>
     <div class="field"><label class="label">Nova senha</label><input class="input" id="ts-nova" type="password" placeholder="Nova senha"></div>
     <div class="field"><label class="label">Confirmar nova senha</label><input class="input" id="ts-nova2" type="password" placeholder="Repita a nova senha"></div>
@@ -324,69 +342,74 @@ textarea.input{resize:none;min-height:72px}
 </div>
 
 <script>
+// ========== FIREBASE ==========
 const FB_URL='https://avali-ed564-default-rtdb.firebaseio.com';
 let db=null,fbReady=false;
 
 function showSyncStatus(msg){
   let el=document.getElementById('sync-status');
   if(!el){el=document.createElement('div');el.id='sync-status';
-    el.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;font-size:11px;padding:4px 12px;border-radius:20px;z-index:200;pointer-events:none;transition:opacity .5s';
+    el.style.cssText='position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;font-size:11px;padding:5px 14px;border-radius:20px;z-index:200;pointer-events:none;transition:opacity .5s';
     document.body.appendChild(el);}
-  el.textContent=msg;el.style.opacity='1';setTimeout(()=>{el.style.opacity='0';},3000);
+  el.textContent=msg;el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0';},3000);
 }
 
 async function initFirebase(){
   try{
-    if(typeof firebase==='undefined'){showSyncStatus('🔴 Modo local');return;}
-    firebase.initializeApp({databaseURL:FB_URL});
+    if(typeof firebase==='undefined'){showSyncStatus('🔴 Sem Firebase');return;}
+    if(!firebase.apps.length)firebase.initializeApp({databaseURL:FB_URL});
     db=firebase.database();fbReady=true;
     db.ref('sessao').on('value',snap=>{
       const data=snap.val();
       if(data){
         const prev=state.projetoAtivo;
-        state={...state,...data,projetoAtivo:prev};
+        // Mescla apenas dados públicos (não auth)
+        if(data.evento!==undefined)state.evento=data.evento;
+        if(data.projetos!==undefined)state.projetos=data.projetos;
+        if(data.criterios!==undefined)state.criterios=data.criterios;
+        if(data.avaliacoes!==undefined)state.avaliacoes=data.avaliacoes;
+        state.projetoAtivo=prev;
         renderAll();
-        const t=document.querySelector('.tab.active');const tn=t?t.dataset.tab:'';
-        if(tn==='avaliacao')renderAvaliacao();if(tn==='resumo')renderResumo();
       }
     });
-    showSyncStatus('🟢 Conectado — sync ativo');
+    showSyncStatus('🟢 Conectado');
   }catch(e){showSyncStatus('🔴 Modo local');}
 }
 
 // ========== ESTADO ==========
 let state={
-  evento:null,projetos:[],criterios:[],avaliacoes:{},projetoAtivo:null,
-  adminSenha:'',avaliadores:[]
+  evento:null,
+  projetos:[],
+  criterios:[],
+  // avaliacoes[projetoId][usuarioAvaliador][criterioId] = valor
+  // avaliacoes[projetoId][usuarioAvaliador].obs = texto
+  avaliacoes:{},
+  projetoAtivo:null,
+  adminSenha:'',
+  avaliadores:[]
 };
 let sessaoAtual=null; // {user, perfil:'admin'|'avaliador', nome}
+let fotoStream=null;
+
+function uid(){return Math.random().toString(36).slice(2,9);}
 
 function save(){
   try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
   if(fbReady&&db){
     const s={evento:state.evento,projetos:state.projetos,criterios:state.criterios,avaliacoes:state.avaliacoes};
     db.ref('sessao').set(s).catch(e=>console.warn(e));
-    showSyncStatus('☁️ Salvo na nuvem');
+    showSyncStatus('☁️ Salvo');
   }
 }
-
 function saveLocal(){
   try{localStorage.setItem('avaliacao_app',JSON.stringify(state));}catch(e){}
 }
-
 function load(){
   try{
     var d=localStorage.getItem('avaliacao_app');
-    if(d){
-      var parsed=JSON.parse(d);
-      if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){
-        state={...state,...parsed};
-      }
-    }
-  }catch(e){
-    try{localStorage.clear();}catch(e2){}
-  }
-  // Restaurar sessão
+    if(d){var p=JSON.parse(d);if(p&&typeof p==='object'&&!Array.isArray(p))state={...state,...p};}
+  }catch(e){try{localStorage.clear();}catch(e2){}}
   try{
     var s=localStorage.getItem('avaliacao_sessao');
     if(s)sessaoAtual=JSON.parse(s);
@@ -394,14 +417,17 @@ function load(){
 }
 
 // ========== LOGIN ==========
-function iniciarTela(){
-  if(!state.adminSenha){
-    document.getElementById('login-setup').style.display='block';
-    document.getElementById('login-form').style.display='none';
-  } else {
-    document.getElementById('login-setup').style.display='none';
-    document.getElementById('login-form').style.display='block';
-  }
+function mostrarPainelLogin(){
+  document.getElementById('painel-login').style.display='block';
+  document.getElementById('painel-setup').style.display='none';
+  // Mostra link de setup só se não há senha criada
+  document.getElementById('link-setup').style.display=state.adminSenha?'none':'block';
+}
+function mostrarPainelSetup(){
+  document.getElementById('painel-login').style.display='none';
+  document.getElementById('painel-setup').style.display='block';
+  ['setup-senha','setup-senha2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('setup-erro').textContent='';
 }
 
 function confirmarSetup(){
@@ -409,8 +435,8 @@ function confirmarSetup(){
   const s2=document.getElementById('setup-senha2').value;
   const err=document.getElementById('setup-erro');
   if(!s1){err.textContent='Digite uma senha.';return;}
-  if(s1!==s2){err.textContent='As senhas não coincidem.';return;}
   if(s1.length<4){err.textContent='Senha muito curta (mínimo 4 caracteres).';return;}
+  if(s1!==s2){err.textContent='As senhas não coincidem.';return;}
   state.adminSenha=s1;
   saveLocal();
   entrarComoAdmin();
@@ -422,11 +448,7 @@ function fazerLogin(){
   const err=document.getElementById('login-erro');
   err.textContent='';
   if(!user||!pass){err.textContent='Preencha usuário e senha.';return;}
-  // Verifica admin
-  if(user==='admin'&&pass===state.adminSenha){
-    entrarComoAdmin();return;
-  }
-  // Verifica avaliadores
+  if(user==='admin'&&pass===state.adminSenha){entrarComoAdmin();return;}
   const av=state.avaliadores.find(a=>a.user.toLowerCase()===user&&a.pass===pass);
   if(av){
     sessaoAtual={user:av.user,perfil:'avaliador',nome:av.nome};
@@ -455,12 +477,13 @@ function fazerLogout(){
   if(!confirm('Deseja sair?'))return;
   sessaoAtual=null;
   localStorage.removeItem('avaliacao_sessao');
+  if(db){try{db.ref('sessao').off();}catch(e){}}
+  fbReady=false;db=null;
   document.getElementById('tela-login').classList.remove('oculta');
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
   document.getElementById('login-erro').textContent='';
-  if(db)db.ref('sessao').off();
-  fbReady=false;db=null;
+  mostrarPainelLogin();
 }
 
 function aplicarPermissoes(){
@@ -469,25 +492,16 @@ function aplicarPermissoes(){
   document.getElementById('tab-config').style.display=isAdmin?'':'none';
   document.getElementById('btn-cfg-header').style.display=isAdmin?'flex':'none';
   document.getElementById('hdr-perfil').textContent=sessaoAtual?(isAdmin?'👑 Admin':'✏️ '+sessaoAtual.nome):'';
-  // Botões de adicionar/importar — só admin
-  const bp=document.getElementById('botoes-projetos');
-  if(bp){
-    const btns=bp.querySelectorAll('button:not([onclick*="abrirLeitorQR"])');
-    btns.forEach(b=>b.style.display=isAdmin?'':'none');
-  }
+  document.getElementById('btn-add-proj').style.display=isAdmin?'':'none';
+  document.getElementById('btn-import-proj').style.display=isAdmin?'':'none';
 }
 
-// ========== RESET / SETUP ==========
+// ========== INICIALIZAÇÃO ==========
 (function(){
   var p=new URLSearchParams(window.location.search);
-  if(p.get('reset')==='1'){
-    try{localStorage.clear();}catch(e){}
-    window.history.replaceState({},'',window.location.pathname);
-  }
+  if(p.get('reset')==='1'){try{localStorage.clear();}catch(e){}window.history.replaceState({},'',window.location.pathname);}
 })();
-
 load();
-
 if(!state.criterios||!state.criterios.length){
   state.criterios=[
     {id:'c1',eixo:'Apresentação',nome:'Explanação Oral e Didática',desc:'Clareza, postura, gestão do tempo',max:1.0},
@@ -499,13 +513,8 @@ if(!state.criterios||!state.criterios.length){
     {id:'c7',eixo:'Protótipo',nome:'Inovação e Aplicabilidade',desc:'Diferencial criativo e viabilidade',max:1.5},
   ];
 }
-
-// Verifica se já tem sessão salva
-if(sessaoAtual){
-  abrirApp();
-} else {
-  iniciarTela();
-}
+if(sessaoAtual){abrirApp();}
+else{mostrarPainelLogin();}
 
 // ========== AVALIADORES ==========
 function openAvaliadorModal(){
@@ -529,7 +538,6 @@ function removerAvaliador(id){
   state.avaliadores=state.avaliadores.filter(a=>a.id!==id);
   saveLocal();renderConfig();
 }
-
 function openTrocarSenhaModal(){
   ['ts-atual','ts-nova','ts-nova2'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ts-erro').textContent='';
@@ -543,29 +551,50 @@ function trocarSenhaAdmin(){
   if(atual!==state.adminSenha){err.textContent='Senha atual incorreta.';return;}
   if(!nova||nova.length<4){err.textContent='Nova senha muito curta.';return;}
   if(nova!==nova2){err.textContent='As senhas não coincidem.';return;}
-  state.adminSenha=nova;
-  saveLocal();closeModal('modal-trocar-senha');
-  showSyncStatus('✅ Senha alterada com sucesso');
+  state.adminSenha=nova;saveLocal();closeModal('modal-trocar-senha');
+  showSyncStatus('✅ Senha alterada');
 }
-
 function resetApp(){
-  if(confirm('Resetar o app completamente? Todos os dados serão apagados.')){
+  if(confirm('Resetar completamente? Todos os dados serão apagados.')){
     try{localStorage.clear();}catch(e){}
     if(fbReady&&db){db.ref('sessao').remove();}
     location.reload();
   }
 }
 
-// ========== RENDER ==========
-function uid(){return Math.random().toString(36).slice(2,9);}
-function nota(pid){const av=state.avaliacoes[pid]||{};return state.criterios.reduce((s,c)=>s+(parseFloat(av[c.id])||0),0);}
+// ========== NOTA POR AVALIADOR ==========
+// Retorna as notas do avaliador logado para um projeto
+function notasDoAvaliador(pid){
+  const user=sessaoAtual?sessaoAtual.user:'admin';
+  return (state.avaliacoes[pid]&&state.avaliacoes[pid][user])||{};
+}
+// Calcula nota total do avaliador logado para um projeto
+function notaAtual(pid){
+  const av=notasDoAvaliador(pid);
+  return state.criterios.reduce((s,c)=>s+(parseFloat(av[c.id])||0),0);
+}
+// Nota máxima possível
 function notaMax(){return state.criterios.reduce((s,c)=>s+parseFloat(c.max),0);}
+
+// Status do projeto para o avaliador logado
 function statusProjeto(pid){
-  const av=state.avaliacoes[pid]||{};
+  const av=notasDoAvaliador(pid);
   const p=state.criterios.filter(c=>av[c.id]!==undefined&&av[c.id]!=='').length;
   if(!p)return'pendente';if(p===state.criterios.length)return'concluido';return'parcial';
 }
 
+// Media entre todos os avaliadores para um projeto
+function mediaGeral(pid){
+  const avMap=state.avaliacoes[pid]||{};
+  const users=Object.keys(avMap);
+  if(!users.length)return null;
+  const totais=users.map(u=>{
+    return state.criterios.reduce((s,c)=>s+(parseFloat(avMap[u][c])||0),0);
+  });
+  return totais.reduce((a,b)=>a+b,0)/totais.length;
+}
+
+// ========== RENDER ==========
 function goTab(tab,el){
   const isAdmin=sessaoAtual&&sessaoAtual.perfil==='admin';
   if((tab==='resumo'||tab==='config')&&!isAdmin)return;
@@ -593,9 +622,10 @@ function renderProjetos(){
   const max=notaMax();
   el.innerHTML=list.map(p=>{
     const st=statusProjeto(p.id);
-    const bm={concluido:'<span class="badge badge-green">✓ '+nota(p.id).toFixed(1)+'</span>',parcial:'<span class="badge badge-amber">Em andamento</span>',pendente:'<span class="badge badge-muted">Pendente</span>'};
+    const n=notaAtual(p.id);
+    const bm={concluido:'<span class="badge badge-green">✓ '+n.toFixed(1)+'</span>',parcial:'<span class="badge badge-amber">Em andamento</span>',pendente:'<span class="badge badge-muted">Pendente</span>'};
     const at=p.adhoc?'<span class="adhoc-tag">★ Ad hoc</span> ':'';
-    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub" style="margin-top:3px">'+(p.integrantes||'')+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,(nota(p.id)/max)*100)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
+    return'<div class="card" style="cursor:pointer" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub" style="margin-top:3px">'+(p.integrantes||'')+'</div><div style="margin-top:8px">'+at+bm[st]+'</div>'+(st!=='pendente'?'<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,(n/max)*100)+'%"></div></div>':'')+'</div><div style="color:var(--fg3);font-size:22px;padding-left:10px">›</div></div></div>';
   }).join('');
 }
 
@@ -609,11 +639,17 @@ function renderAvaliacao(){
   if(!state.projetoAtivo){el.innerHTML='<div class="empty"><div class="empty-icon">✏️</div><div class="empty-title">Nenhum projeto selecionado</div><div class="empty-sub">Selecione um projeto na aba Projetos.</div></div>';return;}
   const p=state.projetos.find(x=>x.id===state.projetoAtivo);
   if(!p){el.innerHTML='';return;}
-  const av=state.avaliacoes[p.id]||{};
-  const max=notaMax();const total=nota(p.id);
+  const av=notasDoAvaliador(p.id); // só as notas do avaliador logado
+  const max=notaMax();const total=notaAtual(p.id);
   const eixos={};
   state.criterios.forEach(c=>{const k=c.eixo||'Critérios';if(!eixos[k])eixos[k]=[];eixos[k].push(c);});
+
+  // Fotos existentes
+  const fotos=av._fotos||[];
+  const fotosHtml=fotos.length?'<div class="fotos-wrap">'+fotos.map((f,i)=>'<img class="foto-thumb" src="'+f+'" onclick="verFoto('+i+',\''+p.id+'\')" alt="foto">').join('')+'</div>':'<div style="font-size:12px;color:var(--fg3)">Nenhuma foto adicionada.</div>';
+
   let html='<div class="card" style="margin-bottom:12px"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div>'+(p.adhoc?'<div style="margin-top:6px"><span class="adhoc-tag">★ Ad hoc</span></div>':'')+'</div>';
+
   Object.entries(eixos).forEach(([eixo,crits])=>{
     const em=crits.reduce((s,c)=>s+parseFloat(c.max),0);
     html+='<div class="sec-label">'+eixo+' <span style="font-weight:400;color:var(--fg3)">(máx '+em.toFixed(1)+')</span></div>';
@@ -622,31 +658,114 @@ function renderAvaliacao(){
       html+='<div class="card"><div class="card-title">'+c.nome+'</div>'+(c.desc?'<div class="card-sub" style="margin-top:2px;margin-bottom:8px">'+c.desc+'</div>':'<div style="height:6px"></div>')+'<div class="score-wrap">'+vals.map(v=>'<button class="score-btn'+(sv===v?' sel':'')+'" onclick="setNota(\''+p.id+'\',\''+c.id+'\','+v+')">'+v+'</button>').join('')+'</div></div>';
     });
   });
-  html+='<div class="total-box"><span class="total-label">Total</span><span class="total-value">'+total.toFixed(1)+' <span style="font-size:16px;font-weight:400;opacity:.6">/ '+max.toFixed(1)+'</span></span></div><div class="field"><label class="label">Observações</label><textarea class="input" placeholder="Registre destaques ou sugestões..." oninput="setObs(\''+p.id+'\',this.value)">'+(av.obs||'')+'</textarea></div><div style="height:16px"></div><button class="btn btn-primary" onclick="concluirAvaliacao(\''+p.id+'\')">✓ Salvar e voltar</button><div style="height:8px"></div>';
+
+  html+='<div class="total-box"><span class="total-label">Sua pontuação</span><span class="total-value">'+total.toFixed(1)+' <span style="font-size:16px;font-weight:400;opacity:.6">/ '+max.toFixed(1)+'</span></span></div>';
+  html+='<div class="field"><label class="label">Observações</label><textarea class="input" placeholder="Registre destaques ou sugestões..." oninput="setObs(\''+p.id+'\',this.value)">'+(av.obs||'')+'</textarea></div>';
+  html+='<div class="sec-label">Fotos do projeto</div>'+fotosHtml;
+  html+='<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="abrirCameraFoto(\''+p.id+'\')">📸 Tirar foto do projeto</button></div>';
+  html+='<div style="height:16px"></div><button class="btn btn-primary" onclick="concluirAvaliacao(\''+p.id+'\')">✓ Salvar e voltar</button><div style="height:8px"></div>';
   el.innerHTML=html;
 }
 
-function gerarValores(max){const s=Math.round(max/0.5)+1;const v=[];for(let i=0;i<s;i++)v.push(parseFloat((i*max/(s-1)).toFixed(1)));return[...new Set(v)];}
-function setNota(pid,cid,val){if(!state.avaliacoes[pid])state.avaliacoes[pid]={};state.avaliacoes[pid][cid]=val;save();renderAvaliacao();renderProjetos();}
-function setObs(pid,val){if(!state.avaliacoes[pid])state.avaliacoes[pid]={};state.avaliacoes[pid].obs=val;save();}
-function concluirAvaliacao(pid){save();goTab('projetos',document.querySelector('[data-tab="projetos"]'));}
+function gerarValores(max){
+  const steps=Math.round(max/0.5)+1;
+  const v=[];
+  for(let i=0;i<steps;i++)v.push(parseFloat((i*max/(steps-1)).toFixed(1)));
+  return[...new Set(v)];
+}
 
+function setNota(pid,cid,val){
+  const user=sessaoAtual?sessaoAtual.user:'admin';
+  if(!state.avaliacoes[pid])state.avaliacoes[pid]={};
+  if(!state.avaliacoes[pid][user])state.avaliacoes[pid][user]={};
+  state.avaliacoes[pid][user][cid]=val;
+  save();renderAvaliacao();renderProjetos();
+}
+
+function setObs(pid,val){
+  const user=sessaoAtual?sessaoAtual.user:'admin';
+  if(!state.avaliacoes[pid])state.avaliacoes[pid]={};
+  if(!state.avaliacoes[pid][user])state.avaliacoes[pid][user]={};
+  state.avaliacoes[pid][user].obs=val;
+  save();
+}
+
+function concluirAvaliacao(pid){
+  save();
+  goTab('projetos',document.querySelector('[data-tab="projetos"]'));
+}
+
+// ========== RESUMO ADMIN ==========
 function renderResumo(){
   const el=document.getElementById('resumo-content');
   const max=notaMax();
-  const conc=state.projetos.filter(p=>statusProjeto(p.id)==='concluido');
-  const pend=state.projetos.filter(p=>statusProjeto(p.id)!=='concluido');
-  const media=conc.length?conc.reduce((s,p)=>s+nota(p.id),0)/conc.length:0;
-  let html='<div class="sec-label">Visão geral</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px">'+state.projetos.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Total</div></div><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--green)">'+conc.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Avaliados</div></div><div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--amber)">'+pend.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Pendentes</div></div></div>';
-  if(conc.length){
-    html+='<div class="card" style="text-align:center;margin-bottom:14px;padding:16px"><div style="font-size:12px;color:var(--fg3);margin-bottom:4px">Média geral</div><div class="nota-grande">'+media.toFixed(2)+'</div><div style="font-size:12px;color:var(--fg3);margin-top:4px">de '+max.toFixed(1)+' pontos</div></div>';
-    const rank=[...state.projetos].filter(p=>statusProjeto(p.id)==='concluido').sort((a,b)=>nota(b.id)-nota(a.id));
-    html+='<div class="sec-label">Ranking</div>';
-    rank.forEach((p,i)=>{const n=nota(p.id);const pct=max>0?(n/max)*100:0;const m=['🥇','🥈','🥉'];html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(m[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+n.toFixed(1)+'</div></div></div>';});
+  if(!state.projetos.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione projetos e avalie para ver o resumo.</div></div>';
+    return;
   }
-  if(pend.length){html+='<div class="sec-label">Pendentes</div>';pend.forEach(p=>{html+='<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="selecionarProjeto(\''+p.id+'\')"><div class="card-row"><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div></div><span class="badge badge-amber">'+(statusProjeto(p.id)==='parcial'?'Parcial':'Pendente')+'</span></div></div>';});}
-  if(!state.projetos.length)html='<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione projetos e avalie para ver o resumo.</div></div>';
-  html+='<div style="height:8px"></div><button class="btn btn-secondary" onclick="exportarCSV()">↓ Exportar CSV</button><div style="height:8px"></div>';
+
+  // Lista de avaliadores que já avaliaram algo
+  const todosAvs=new Set();
+  state.projetos.forEach(p=>{
+    Object.keys(state.avaliacoes[p.id]||{}).forEach(u=>todosAvs.add(u));
+  });
+  const avsArr=[...todosAvs];
+
+  // Cards de visão geral
+  const conc=state.projetos.filter(p=>{
+    const avMap=state.avaliacoes[p.id]||{};
+    return Object.keys(avMap).length>0 && Object.values(avMap).some(uav=>state.criterios.every(c=>uav[c.id]!==undefined&&uav[c.id]!==''));
+  });
+
+  let html='<div class="sec-label">Visão geral</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">';
+  html+='<div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px">'+state.projetos.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Projetos</div></div>';
+  html+='<div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--green)">'+conc.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Concluídos</div></div>';
+  html+='<div class="card" style="text-align:center;padding:12px"><div class="nota-grande" style="font-size:28px;color:var(--amber)">'+avsArr.length+'</div><div style="font-size:11px;color:var(--fg3);margin-top:3px">Avaliadores</div></div>';
+  html+='</div>';
+
+  // Tabela de notas
+  html+='<div class="sec-label">Notas por avaliador</div>';
+  html+='<div style="overflow-x:auto"><table class="resumo-table"><thead><tr><th>Projeto</th>';
+  avsArr.forEach(u=>{ const nome=u==='admin'?'Admin':(state.avaliadores.find(a=>a.user===u)||{nome:u}).nome; html+='<th>'+nome+'</th>'; });
+  html+='<th>Média</th></tr></thead><tbody>';
+
+  const rank=[];
+  state.projetos.forEach(p=>{
+    const avMap=state.avaliacoes[p.id]||{};
+    const notas=avsArr.map(u=>{
+      const uav=avMap[u]||{};
+      return state.criterios.reduce((s,c)=>s+(parseFloat(uav[c.id])||0),0);
+    });
+    const media=notas.length?notas.reduce((a,b)=>a+b,0)/notas.filter((_,i)=>Object.keys(avMap[avsArr[i]]||{}).length>0).length:null;
+    rank.push({p,notas,media:isNaN(media)?null:media});
+  });
+  rank.sort((a,b)=>(b.media||0)-(a.media||0));
+
+  rank.forEach(({p,notas,media})=>{
+    html+='<tr><td><strong>'+p.grupo+'</strong><br><span style="font-size:11px;color:var(--fg3)">'+p.titulo+'</span></td>';
+    avsArr.forEach((u,i)=>{
+      const uav=state.avaliacoes[p.id]&&state.avaliacoes[p.id][u]||{};
+      const temNota=Object.keys(uav).some(k=>k!=='obs'&&k!=='_fotos');
+      html+='<td>'+(temNota?notas[i].toFixed(1):'—')+'</td>';
+    });
+    html+='<td class="media">'+(media!==null?media.toFixed(2):'—')+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+
+  // Ranking
+  const comMedia=rank.filter(r=>r.media!==null);
+  if(comMedia.length){
+    html+='<div class="sec-label" style="margin-top:16px">Ranking</div>';
+    const medals=['🥇','🥈','🥉'];
+    comMedia.forEach(({p,media},i)=>{
+      const pct=max>0?(media/max)*100:0;
+      html+='<div class="card" style="margin-bottom:8px"><div class="card-row"><div style="font-size:18px;margin-right:10px">'+(medals[i]||'·')+'</div><div style="flex:1"><div class="card-title">Grupo '+p.grupo+' — '+p.titulo+'</div><div class="card-sub">'+(p.integrantes||'')+'</div><div class="prog-bar-wrap"><div class="prog-bar" style="width:'+Math.min(100,pct)+'%"></div></div></div><div style="font-size:18px;font-weight:700;color:var(--green);margin-left:12px">'+media.toFixed(2)+'</div></div></div>';
+    });
+  }
+
+  html+='<div style="height:8px"></div><button class="btn btn-secondary" onclick="exportarCSV()">↓ Exportar CSV</button><div style="height:12px"></div>';
   el.innerHTML=html;
 }
 
@@ -674,15 +793,17 @@ function renderConfig(){
   const ela=document.getElementById('lista-avaliadores');
   if(!state.avaliadores.length){ela.innerHTML='<div style="font-size:13px;color:var(--fg3);padding:8px 0">Nenhum avaliador cadastrado.</div>';}
   else{
-    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-item"><div><div class="avaliador-nome">'+a.nome+'</div><div class="avaliador-user">@'+a.user+'</div></div><button class="crit-remove" onclick="removerAvaliador(\''+a.id+'\')">🗑</button></div>').join('');
+    ela.innerHTML=state.avaliadores.map(a=>'<div class="avaliador-row"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+a.nome+'</div><div style="font-size:11px;color:var(--fg3)">@'+a.user+'</div></div><button class="crit-remove" onclick="removerAvaliador(\''+a.id+'\')">🗑</button></div>').join('');
   }
 }
 
 function removerCriterio(id){state.criterios=state.criterios.filter(c=>c.id!==id);save();renderConfig();}
 function confirmLimpar(){if(confirm('Apagar todas as avaliações?')){state.avaliacoes={};save();renderAll();}}
-function confirmLimparProjetos(){if(confirm('Apagar TODOS os projetos e avaliações?')){state.projetos=[];state.avaliacoes={};save();renderAll();showSyncStatus('🗑 Projetos removidos');}}
+function confirmLimparProjetos(){if(confirm('Apagar TODOS os projetos e avaliações?')){state.projetos=[];state.avaliacoes={};save();renderAll();}}
+
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
 function openEventModal(){
   if(state.evento){document.getElementById('ev-nome').value=state.evento.nome||'';document.getElementById('ev-inst').value=state.evento.inst||'';document.getElementById('ev-disc').value=state.evento.disc||'';document.getElementById('ev-data').value=state.evento.data||'';}
@@ -694,11 +815,10 @@ function salvarEvento(){
   state.evento={nome,inst:document.getElementById('ev-inst').value.trim(),disc:document.getElementById('ev-disc').value.trim(),data:document.getElementById('ev-data').value};
   save();renderAll();closeModal('modal-evento');
 }
-
-function openAddProjetoModal(adhoc){
-  document.getElementById('add-proj-title').textContent=adhoc?'Adicionar projeto (ad hoc)':'Adicionar projeto';
-  document.getElementById('adhoc-wrap').style.display=adhoc?'block':'none';
-  document.getElementById('proj-adhoc').checked=adhoc;
+function openAddProjetoModal(){
+  document.getElementById('add-proj-title').textContent='Adicionar projeto';
+  document.getElementById('adhoc-wrap').style.display='none';
+  document.getElementById('proj-adhoc').checked=false;
   ['proj-grupo','proj-titulo','proj-integrantes','proj-desc'].forEach(id=>document.getElementById(id).value='');
   openModal('modal-add-projeto');
 }
@@ -708,7 +828,6 @@ function salvarProjeto(){
   state.projetos.push({id:uid(),grupo:document.getElementById('proj-grupo').value.trim()||'—',titulo,integrantes:document.getElementById('proj-integrantes').value.trim(),desc:document.getElementById('proj-desc').value.trim(),adhoc:document.getElementById('proj-adhoc').checked});
   save();renderProjetos();closeModal('modal-add-projeto');
 }
-
 function openCriterioModal(){['crit-eixo','crit-nome','crit-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('crit-max').value='1.5';openModal('modal-criterio');}
 function salvarCriterio(){
   const nome=document.getElementById('crit-nome').value.trim();
@@ -717,28 +836,24 @@ function salvarCriterio(){
   save();renderConfig();closeModal('modal-criterio');
 }
 
-// ========== QR CODE ==========
+// ========== CÂMERA QR ==========
 let qrStream=null,qrInterval=null;
 function abrirLeitorQR(){
   openModal('modal-qr');
   document.getElementById('qr-status').textContent='Iniciando câmera...';
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
     .then(function(stream){
-      qrStream=stream;
-      var v=document.getElementById('qr-video');
+      qrStream=stream;var v=document.getElementById('qr-video');
       v.srcObject=stream;
       v.onloadedmetadata=function(){
         v.play().then(function(){
           document.getElementById('qr-status').textContent='Aponte para o QR Code';
           qrInterval=setInterval(lerFrameQR,300);
         }).catch(function(err){
-          document.getElementById('qr-status').textContent='Erro ao iniciar vídeo: '+err.message;
+          document.getElementById('qr-status').textContent='Erro: '+err.message;
         });
       };
-    })
-    .catch(function(err){
-      document.getElementById('qr-status').textContent='Câmera não disponível: '+err.message;
-    });
+    }).catch(function(err){document.getElementById('qr-status').textContent='Câmera indisponível: '+err.message;});
 }
 function lerFrameQR(){
   var v=document.getElementById('qr-video'),c=document.getElementById('qr-canvas');
@@ -753,21 +868,22 @@ function processarQR(texto){
   fecharLeitorQR();
   var id=null;
   try{var url=new URL(texto);id=url.searchParams.get('projeto');}
-  catch(e){if(texto.startsWith('adhoc_')||texto.length<30)id=texto;}
+  catch(e){if(texto.length<30)id=texto;}
   if(!id){alert('QR Code não reconhecido.');return;}
   var existe=state.projetos.find(function(p){return p.id===id;});
   if(existe){selecionarProjeto(id);showSyncStatus('✅ Projeto selecionado via QR');return;}
   buscarProjetoFirebase(id);
 }
 function buscarProjetoFirebase(id){
-  if(!fbReady||!db){alert('Sem conexão com Firebase.');return;}
-  showSyncStatus('🔄 Buscando projeto...');
-  db.ref('projetos/'+id).once('value',function(snap){
-    var p=snap.val();
+  if(!fbReady||!db){alert('Sem conexão com Firebase para buscar projeto.');return;}
+  showSyncStatus('🔄 Buscando...');
+  db.ref('sessao/projetos').once('value',function(snap){
+    var projetos=snap.val();
+    if(!projetos||!Array.isArray(projetos)){alert('Projeto não encontrado.');return;}
+    var p=projetos.find(function(x){return x.id===id;});
     if(!p){alert('Projeto não encontrado. ID: '+id);return;}
-    state.projetos.push(p);save();renderProjetos();
-    showSyncStatus('✅ Importado via QR');
-    selecionarProjeto(id);
+    if(!state.projetos.find(function(x){return x.id===id;})){state.projetos.push(p);save();}
+    renderProjetos();selecionarProjeto(id);showSyncStatus('✅ Importado via QR');
   });
 }
 function fecharLeitorQR(){
@@ -776,6 +892,55 @@ function fecharLeitorQR(){
   var v=document.getElementById('qr-video');if(v)v.srcObject=null;
   closeModal('modal-qr');
 }
+
+// ========== CÂMERA FOTO ==========
+let fotoProjetoId=null;
+function abrirCameraFoto(pid){
+  fotoProjetoId=pid;
+  openModal('modal-foto');
+  document.getElementById('foto-status').textContent='Posicione o projeto e toque em Capturar';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}})
+    .then(function(stream){
+      fotoStream=stream;var v=document.getElementById('foto-video');
+      v.srcObject=stream;
+      v.onloadedmetadata=function(){v.play();};
+    }).catch(function(err){document.getElementById('foto-status').textContent='Câmera indisponível: '+err.message;});
+}
+function capturarFoto(){
+  var v=document.getElementById('foto-video'),c=document.getElementById('foto-canvas');
+  if(!fotoStream||v.readyState!==v.HAVE_ENOUGH_DATA){alert('Câmera ainda não pronta.');return;}
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
+  var dataUrl=c.toDataURL('image/jpeg',0.8);
+  // Salva na avaliação do usuário logado
+  var user=sessaoAtual?sessaoAtual.user:'admin';
+  if(!state.avaliacoes[fotoProjetoId])state.avaliacoes[fotoProjetoId]={};
+  if(!state.avaliacoes[fotoProjetoId][user])state.avaliacoes[fotoProjetoId][user]={};
+  if(!state.avaliacoes[fotoProjetoId][user]._fotos)state.avaliacoes[fotoProjetoId][user]._fotos=[];
+  state.avaliacoes[fotoProjetoId][user]._fotos.push(dataUrl);
+  save();
+  // Download automático
+  var a=document.createElement('a');
+  var p=state.projetos.find(function(x){return x.id===fotoProjetoId;});
+  a.download='foto_projeto_'+(p?p.grupo:'')+'_'+Date.now()+'.jpg';
+  a.href=dataUrl;a.click();
+  fecharCamera();
+  showSyncStatus('📸 Foto salva e baixada');
+  if(state.projetoAtivo===fotoProjetoId)renderAvaliacao();
+}
+function fecharCamera(){
+  if(fotoStream){fotoStream.getTracks().forEach(function(t){t.stop();});fotoStream=null;}
+  var v=document.getElementById('foto-video');if(v)v.srcObject=null;
+  closeModal('modal-foto');
+}
+function verFoto(idx,pid){
+  var user=sessaoAtual?sessaoAtual.user:'admin';
+  var fotos=(state.avaliacoes[pid]&&state.avaliacoes[pid][user]&&state.avaliacoes[pid][user]._fotos)||[];
+  if(!fotos[idx])return;
+  var w=window.open();w.document.write('<img src="'+fotos[idx]+'" style="max-width:100%;max-height:100vh">');
+}
+
+// ========== URL PARAMS ==========
 function verificarURLParams(){
   var params=new URLSearchParams(window.location.search);var pid=params.get('projeto');if(!pid)return;
   var existe=state.projetos.find(function(p){return p.id===pid;});
@@ -800,7 +965,7 @@ function importarExcel(input){
 function guessCol(cols,hints){for(const h of hints){const f=cols.find(c=>c.toLowerCase().includes(h));if(f)return f;}return cols[0]||'';}
 function renderImportModal(){
   const cG=guessCol(importCols,['grupo','num','n°','nº','id','#']);
-  const cT=guessCol(importCols,['titulo','título','nome','projeto','project']);
+  const cT=guessCol(importCols,['titulo','título','nome','projeto']);
   const cI=guessCol(importCols,['integr','aluno','membro','autor','equipe']);
   const sel=s=>importCols.map(c=>'<option value="'+c+'"'+(c===s?' selected':'')+'>'+c+'</option>').join('');
   document.getElementById('import-preview').innerHTML='<div style="font-size:13px;color:var(--fg2);margin-bottom:12px"><b>'+importRows.length+'</b> linha(s). Colunas: <span style="color:var(--fg3)">'+importCols.join(', ')+'</span></div>';
@@ -815,11 +980,19 @@ function confirmarImport(){
   save();renderProjetos();closeModal('modal-import');showSyncStatus('✅ '+novos.length+' projeto(s) importado(s)');
 }
 
-document.querySelectorAll('.overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
-
+// ========== CSV EXPORT ==========
 function exportarCSV(){
-  const cols=['grupo','titulo','integrantes','ad_hoc',...state.criterios.map(c=>c.nome),'total','obs'];
-  const rows=state.projetos.map(p=>{const av=state.avaliacoes[p.id]||{};return[p.grupo,p.titulo,p.integrantes,p.adhoc?'sim':'não',...state.criterios.map(c=>av[c.id]!==undefined?av[c.id]:''),nota(p.id).toFixed(1),av.obs||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',');});
+  const avsArr=[...new Set(state.projetos.flatMap(p=>Object.keys(state.avaliacoes[p.id]||{})))];
+  const avNomes=avsArr.map(u=>u==='admin'?'Admin':(state.avaliadores.find(a=>a.user===u)||{nome:u}).nome);
+  const cols=['grupo','titulo','integrantes',...avNomes,'media','obs_admin'];
+  const rows=state.projetos.map(p=>{
+    const avMap=state.avaliacoes[p.id]||{};
+    const notas=avsArr.map(u=>state.criterios.reduce((s,c)=>s+(parseFloat((avMap[u]||{})[c.id])||0),0));
+    const validas=notas.filter((_,i)=>Object.keys(avMap[avsArr[i]]||{}).length>0);
+    const media=validas.length?validas.reduce((a,b)=>a+b,0)/validas.length:null;
+    const obsAdmin=(avMap['admin']||{}).obs||'';
+    return[p.grupo,p.titulo,p.integrantes,...notas.map(n=>n.toFixed(1)),media!==null?media.toFixed(2):'',obsAdmin].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',');
+  });
   const csv=[cols.map(c=>'"'+c+'"').join(','),...rows].join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='avaliacoes.csv';a.click();URL.revokeObjectURL(url);
