@@ -460,7 +460,7 @@ function lerFrameQR(){
   c.width=v.videoWidth;c.height=v.videoHeight;
   var ctx=c.getContext('2d');ctx.drawImage(v,0,0,c.width,c.height);
   var img=ctx.getImageData(0,0,c.width,c.height);
-  var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+  var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});
   if(code)processarQR(code.data);
 }
 function processarQR(texto){
